@@ -16,6 +16,10 @@ export const metadata: Metadata = {
   title: "ماراثون الخدمة",
   description: "رحلة خدمة ونمو وتحدي للأطفال",
 
+  metadataBase: new URL(
+    "https://marathon-app-4dcg.vercel.app"
+  ),
+
   icons: {
     icon: "/icon.png",
     shortcut: "/icon.png",
@@ -43,13 +47,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="ar"
+      dir="rtl"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flexقطول">
+      <body className="min-h-screen w-full overflow-x-hidden flex flex-col">
         {children}
       </body>
     </html>
