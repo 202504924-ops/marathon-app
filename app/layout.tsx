@@ -16,6 +16,12 @@ export const metadata: Metadata = {
   title: "ماراثون الخدمة",
   description: "رحلة خدمة ونمو وتحدي للأطفال",
 
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
+
   openGraph: {
     title: "ماراثون الخدمة",
     description: "رحلة خدمة ونمو وتحدي للأطفال",
@@ -43,7 +49,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="ar"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flexقطول">
         {children}
       </body>
     </html>
