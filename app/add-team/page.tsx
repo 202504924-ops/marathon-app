@@ -59,10 +59,11 @@ export default function AddTeamPage() {
       }
 
       const { error } = await supabase
-        .from("teams")
-        .insert({
-          name: cleanName,
-        });
+  .from("teams")
+  .insert({
+    name: cleanName,
+    points: 0,
+  });
 
       if (error) {
         console.error(error);

@@ -58,6 +58,15 @@ export default function Home() {
   const [attendanceCount, setAttendanceCount] = useState(0);
   const [dashboardLoading, setDashboardLoading] = useState(false);
 
+type QuestionItem = {
+  question: string;
+  answers: string[];
+  correctIndex: number | null;
+  points: number;
+};
+
+const [questions, setQuestions] = useState<QuestionItem[]>([]);
+
   useEffect(() => {
     const savedUser = localStorage.getItem("marathon_user");
 
@@ -487,6 +496,51 @@ export default function Home() {
     return `أهلاً يا (${loggedUser.name})`;
   }
 
+function addQuestion() {
+  setQuestions([
+    ...questions,
+    {
+      question: "",
+      answers: ["", "", "", ""],
+      correctIndex: null,
+      points: 10,
+    },
+  ]);
+}
+
+function updateQuestion(
+  index: number,
+  field: keyof QuestionItem,
+  value: any
+) {
+  const newQuestions = [...questions];
+
+  newQuestions[index] = {
+    ...newQuestions[index],
+    [field]: value,
+  };
+
+  setQuestions(newQuestions);
+}
+
+function updateAnswer(
+  questionIndex: number,
+  answerIndex: number,
+  value: string
+) {
+  const newQuestions = [...questions];
+
+  newQuestions[questionIndex].answers[answerIndex] = value;
+
+  setQuestions(newQuestions);
+}
+
+function deleteQuestion(index: number) {
+  setQuestions(
+    questions.filter((_, i) => i !== index)
+  );
+}
+
   // =========================
   // صفحة تسجيل الدخول
   // =========================
@@ -831,39 +885,62 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Weekly Challenge */}
-        <div className="mb-5 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
+        {/* Weekly Lesson */}
+<div className="mb-5 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
 
-          <p className="mb-2 text-sm text-blue-400">
-            التحدي الأسبوعي
-          </p>
+  <p className="mb-2 text-sm text-blue-400">
+    درس الأسبوع
+  </p>
 
-          <h2 className="text-lg font-bold sm:text-xl">
-            راجع درس الأسبوع واحفظ الآية
-          </h2>
+  <h2 className="text-lg font-bold sm:text-xl">
+    درس الأسبوع الحالي
+  </h2>
 
-          <p className="mt-2 text-sm leading-6 text-slate-400 sm:text-base">
-            أنجز التحدي واحصل على نقاط جديدة لفريقك.
-          </p>
+  <p className="mt-2 text-sm leading-6 text-slate-400 sm:text-base">
+    ادخل وشاهد شرح الدرس واحصل على نقاط فريقك.
+  </p>
 
-        </div>
+  <button
+    type="button"
+    onClick={() => {
+      window.location.href = "/child-weekly-lesson";
+    }}
+    className="mt-4 w-full rounded-xl bg-blue-600 py-3 font-bold transition hover:bg-blue-500"
+  >
+    دخول الدرس 📖
+  </button>
 
-        {/* Kahoot */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
+</div>
 
-          <p className="mb-2 text-sm text-blue-400">
-            المنافسة الأسبوعية
-          </p>
+{/* Bible Reading */}
 
-          <h2 className="text-lg font-bold sm:text-xl">
-            مسابقة Kahoot
-          </h2>
+<div className="mb-5 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
 
-          <p className="mt-2 text-sm leading-6 text-slate-400 sm:text-base">
-            استعد للمنافسة وخلّي فريقك في الصدارة!
-          </p>
+  <p className="mb-2 text-sm text-green-400">
+    📖 الكتاب المقدس
+  </p>
 
-        </div>
+  <h2 className="text-lg font-bold sm:text-xl">
+    قراءة اليوم
+  </h2>
+
+  <p className="mt-2 text-sm leading-6 text-slate-400 sm:text-base">
+    اقرأ الإصحاح المطلوب وأجب على سؤال اليوم لتحصل على نقاط فريقك.
+  </p>
+
+
+  <button
+    type="button"
+    onClick={() => {
+      window.location.href = "/child-bible";
+    }}
+    className="mt-4 w-full rounded-xl bg-green-600 py-3 font-bold transition hover:bg-green-500"
+  >
+    دخول الكتاب المقدس 📖
+  </button>
+
+</div>
+
 
       </div>
     </main>

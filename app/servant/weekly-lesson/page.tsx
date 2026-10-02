@@ -7,12 +7,10 @@ import { useRouter } from "next/navigation";
 
 type Lesson = {
   id:number;
-  week_number:number;
   title:string;
   story:string;
   verse:string;
   reference:string | null;
-  is_active:boolean;
 };
 
 
@@ -22,57 +20,42 @@ export default function WeeklyLessonPage(){
 const router = useRouter();
 
 
-
 const [lesson,setLesson] = useState<Lesson|null>(null);
-
 
 const [title,setTitle] = useState("");
 const [story,setStory] = useState("");
 const [verse,setVerse] = useState("");
 const [reference,setReference] = useState("");
 
+const [mode,setMode] = useState<"view"|"edit">("view");
 
-
-
-const [editing,setEditing] = useState(false);
 const [newLesson,setNewLesson] = useState(false);
-
 
 const [loading,setLoading] = useState(true);
 const [saving,setSaving] = useState(false);
 
 
 
-
 useEffect(()=>{
-
 loadLesson();
-
 },[]);
-
-
 
 
 
 async function loadLesson(){
 
-
 const {data,error}=await supabase
 .from("weekly_lessons")
-.select("*")
+.select("id,title,story,verse,reference")
 .eq("is_active",true)
 .order("created_at",{ascending:false})
 .limit(1)
 .maybeSingle();
 
 
-
 if(error){
-
 console.log(error);
-
 }
-
 
 
 if(data){
@@ -87,89 +70,37 @@ setReference(data.reference || "");
 }
 
 
-
 setLoading(false);
 
-
 }
-
-
 
 
 
 
 async function saveLesson(){
 
+if(!title || !story || !verse || !reference){
 
-if(!title || !story || !verse){
-
-alert("اكتب بيانات الدرس كاملة");
-
+alert("من فضلك أكمل البيانات");
 return;
 
 }
-
 
 
 setSaving(true);
 
 
 
+if(newLesson){
 
-
-// تعديل الدرس الحالي
-
-if(lesson && !newLesson){
-
-
-
-const {error}=await supabase
-.from("weekly_lessons")
-.update({
-
-title,
-story,
-verse,
-reference,
-
-})
-.eq("id",lesson.id);
-
-
-
-if(error){
-
-console.log(error);
-
-alert("حدث خطأ أثناء التعديل");
-
-}else{
-
-alert("تم تعديل الدرس ✅");
-
-}
-
-
-
-}
-
-
-
-
-// إنشاء درس جديد
-
-else{
 
 
 await supabase
 .from("weekly_lessons")
 .update({
-
 is_active:false
-
 })
 .eq("is_active",true);
-
 
 
 
@@ -182,15 +113,12 @@ const {data:last}=await supabase
 
 
 
-
 const nextWeek =
 last?.week_number
 ?
 last.week_number + 1
 :
 1;
-
-
 
 
 
@@ -205,6 +133,8 @@ story,
 verse,
 reference,
 
+challenge:"",
+
 is_active:true
 
 });
@@ -214,8 +144,7 @@ is_active:true
 if(error){
 
 console.log(error);
-
-alert("حدث خطأ أثناء نشر الدرس");
+alert("حدث خطأ");
 
 }else{
 
@@ -223,18 +152,44 @@ alert("تم نشر الدرس الجديد 📖✨");
 
 }
 
+}else{
+
+
+
+const {error}=await supabase
+.from("weekly_lessons")
+.update({
+
+title,
+story,
+verse,
+reference
+
+})
+.eq("id",lesson?.id);
+
+
+
+if(error){
+
+console.log(error);
+
+}else{
+
+alert("تم تعديل الدرس ✅");
+
+}
+
 
 
 }
 
 
 
-setEditing(false);
+setMode("view");
 setNewLesson(false);
 
-
 loadLesson();
-
 
 setSaving(false);
 
@@ -244,10 +199,7 @@ setSaving(false);
 
 
 
-
-
 function createNew(){
-
 
 setTitle("");
 setStory("");
@@ -255,55 +207,9 @@ setVerse("");
 setReference("");
 
 setNewLesson(true);
-setEditing(true);
-
-
-}
-
-
-
-
-
-
-
-async function deleteLesson(){
-
-
-if(!lesson) return;
-
-
-const ok = confirm("هل تريد حذف الدرس؟");
-
-
-if(!ok)return;
-
-
-
-const {error}=await supabase
-.from("weekly_lessons")
-.delete()
-.eq("id",lesson.id);
-
-
-
-if(error){
-
-console.log(error);
-
-return;
+setMode("edit");
 
 }
-
-
-
-alert("تم حذف الدرس");
-
-
-setLesson(null);
-
-
-}
-
 
 
 
@@ -324,17 +230,18 @@ className="min-h-screen bg-slate-950 flex items-center justify-center text-white
 )
 
 }
+
+
+
+
+
 return(
 
 <main
 dir="rtl"
-className="
-min-h-screen
-bg-slate-950
-text-white
-p-5
-"
+className="min-h-screen bg-slate-950 text-white p-5"
 >
+
 
 <div className="max-w-4xl mx-auto">
 
@@ -347,12 +254,11 @@ onClick={()=>router.push("/servant/dashboard")}
 className="
 mb-6
 rounded-xl
+bg-slate-900
 border
 border-slate-700
-bg-slate-900
 px-5
 py-3
-hover:bg-slate-800
 "
 
 >
@@ -360,7 +266,6 @@ hover:bg-slate-800
 ⬅️ لوحة الخادم
 
 </button>
-
 
 
 
@@ -394,7 +299,7 @@ mb-8
 </h1>
 
 
-<p className="mt-3 text-slate-400 text-lg">
+<p className="text-slate-400 mt-3">
 
 جهز درس الأطفال وانشر كلمة ربنا ❤️
 
@@ -409,7 +314,7 @@ mb-8
 
 
 
-{editing ? (
+{mode==="edit" ? (
 
 
 
@@ -425,7 +330,7 @@ space-y-5
 >
 
 
-<InputBox
+<Input
 icon="📚"
 title="عنوان الدرس"
 value={title}
@@ -433,20 +338,15 @@ setValue={setTitle}
 />
 
 
-
-
-<TextBox
+<TextArea
 icon="📜"
-title="قصة الدرس"
+title="القصة"
 value={story}
 setValue={setStory}
 />
 
 
-
-
-
-<TextBox
+<TextArea
 icon="✝️"
 title="آية الحفظ"
 value={verse}
@@ -454,25 +354,12 @@ setValue={setVerse}
 />
 
 
-
-
-
-<InputBox
+<Input
 icon="📌"
 title="الشاهد"
 value={reference}
 setValue={setReference}
 />
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -487,116 +374,71 @@ w-full
 rounded-2xl
 bg-green-600
 py-4
-text-lg
 font-black
-hover:bg-green-500
+text-lg
 "
 
 >
 
-{
-
-saving
-?
+{saving?
 "جاري الحفظ..."
 :
-newLesson
-?
-"🚀 نشر الدرس الجديد"
+newLesson?
+"🚀 نشر الدرس"
 :
 "💾 حفظ التعديل"
-
 }
 
 
 </button>
 
 
-
 </div>
 
 
 
-
-)
-
-:
-
-lesson ? (
+):(
 
 
 
 <div className="space-y-5">
 
 
-<LessonCard
-
+<Card
 icon="📚"
-
 title="عنوان الدرس"
-
-text={lesson.title}
-
+text={lesson?.title}
 />
 
 
-
-
-
-<LessonCard
-
+<Card
 icon="📜"
-
 title="القصة"
-
-text={lesson.story}
-
+text={lesson?.story}
 />
 
 
-
-
-
-<LessonCard
-
+<Card
 icon="✝️"
-
 title="آية الحفظ"
-
-text={lesson.verse}
-
+text={lesson?.verse}
 />
 
 
-
-
-
-<LessonCard
-
+<Card
 icon="📌"
-
 title="الشاهد"
-
-text={lesson.reference || "لا يوجد"}
-
+text={lesson?.reference || "لا يوجد"}
 />
 
 
 
-<div className="
-grid
-sm:grid-cols-3
-gap-4
-mt-8
-">
-
-
-
+<div className="grid sm:grid-cols-2 gap-4">
 
 
 <button
 
-onClick={()=>setEditing(true)}
+onClick={()=>setMode("edit")}
 
 className="
 rounded-2xl
@@ -607,13 +449,9 @@ font-black
 
 >
 
-✏️ تعديل
+✏️ تعديل الدرس
 
 </button>
-
-
-
-
 
 
 
@@ -636,93 +474,14 @@ font-black
 
 
 
-
-
-
-
-<button
-
-onClick={deleteLesson}
-
-className="
-rounded-2xl
-bg-red-600
-py-4
-font-black
-"
-
->
-
-🗑️ حذف
-
-</button>
-
-
-
+</div>
 
 
 </div>
 
 
+)}
 
-
-</div>
-
-
-
-)
-
-
-
-:
-
-(
-
-<div
-className="
-rounded-3xl
-bg-slate-900
-p-8
-text-center
-border
-border-slate-800
-"
->
-
-<h2 className="text-2xl font-black">
-
-لا يوجد درس حاليا 📖
-
-</h2>
-
-
-<button
-
-onClick={createNew}
-
-className="
-mt-5
-rounded-xl
-bg-green-600
-px-6
-py-3
-font-bold
-"
-
->
-
-🆕 إنشاء درس
-
-</button>
-
-
-</div>
-
-)
-
-
-
-}
 
 
 
@@ -740,13 +499,7 @@ font-bold
 
 
 
-function LessonCard({
-
-icon,
-title,
-text
-
-}:any){
+function Card({icon,title,text}:any){
 
 return(
 
@@ -761,28 +514,14 @@ shadow-xl
 "
 >
 
-
-<h2
-className="
-text-2xl
-font-black
-mb-4
-"
->
+<h2 className="text-2xl font-black mb-4">
 
 {icon} {title}
 
 </h2>
 
 
-
-<p
-className="
-text-slate-300
-leading-9
-whitespace-pre-line
-"
->
+<p className="text-slate-300 leading-9 whitespace-pre-line">
 
 {text}
 
@@ -800,33 +539,18 @@ whitespace-pre-line
 
 
 
-function InputBox({
 
-icon,
-title,
-value,
-setValue
-
-}:any){
+function Input({icon,title,value,setValue}:any){
 
 return(
 
 <div>
 
-
-<label
-className="
-block
-mb-2
-font-bold
-text-slate-300
-"
->
+<label className="block mb-2 font-bold text-slate-300">
 
 {icon} {title}
 
 </label>
-
 
 
 <input
@@ -846,7 +570,6 @@ p-4
 
  />
 
-
 </div>
 
 )
@@ -859,33 +582,17 @@ p-4
 
 
 
-function TextBox({
-
-icon,
-title,
-value,
-setValue
-
-}:any){
+function TextArea({icon,title,value,setValue}:any){
 
 return(
 
 <div>
 
-
-<label
-className="
-block
-mb-2
-font-bold
-text-slate-300
-"
->
+<label className="block mb-2 font-bold text-slate-300">
 
 {icon} {title}
 
 </label>
-
 
 
 <textarea

@@ -124,6 +124,8 @@ export default function ServantDashboard() {
       // Data Assignment
       const childrenData: Child[] = childrenRes.data || [];
       const pointsData: TeamPoint[] = pointsRes.data || [];
+      console.log("POINTS FROM SUPABASE:", pointsRes.data);
+console.log("POINTS DATA:", pointsData);
       const teamsData: Team[] = teamsRes.data || [];
 
       setTotalChildren(childrenData.length);
@@ -151,6 +153,10 @@ export default function ServantDashboard() {
         points: pointsMap.get(team.id) || 0,
         childrenCount: childrenMap.get(team.id) || 0,
       }));
+
+      console.log("TEAMS:", teamsData);
+console.log("POINTS MAP:", pointsMap);
+console.log("FINAL RANKING:", ranking);
 
       // Sort Descending by Points
       ranking.sort((a, b) => b.points - a.points);
@@ -342,40 +348,43 @@ export default function ServantDashboard() {
             </div>
 
             {/* 2. Quick Actions Grid */}
-            <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl sm:p-6">
-              <div className="mb-4">
-                <p className="text-xs text-blue-400">الوصول السريع</p>
-                <h2 className="text-lg font-bold">تسجيل ورصد الخدمات</h2>
-              </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+  <QuickAction
+    icon="📋"
+    title="تسجيل الحضور"
+    onClick={() => goTo("/attendance")}
+  />
 
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                <QuickAction
-                  icon="📋"
-                  title="تسجيل الحضور"
-                  onClick={() => goTo("/attendance")}
-                />
-                <QuickAction
-                  icon="⛪"
-                  title="حضور القداس"
-                  onClick={() => goTo("/mass")}
-                />
-                <QuickAction
-                  icon="✝️"
-                  title="الاعتراف"
-                  onClick={() => goTo("/confession")}
-                />
-                <QuickAction
-                  icon="📖"
-                  title="تسميع المزمور"
-                  onClick={() => goTo("/psalm")}
-                />
-                <QuickAction
-                  icon="⭐"
-                  title="تعديل النقاط"
-                  onClick={() => goTo("/points")}
-                />
-              </div>
-            </div>
+  <QuickAction
+    icon="⛪"
+    title="حضور القداس"
+    onClick={() => goTo("/mass")}
+  />
+
+  <QuickAction
+    icon="✝️"
+    title="الاعتراف"
+    onClick={() => goTo("/confession")}
+  />
+
+  <QuickAction
+    icon="📖"
+    title="تسميع المزمور"
+    onClick={() => goTo("/psalm")}
+  />
+
+  <QuickAction
+    icon="⭐"
+    title="تعديل النقاط"
+    onClick={() => goTo("/points")}
+  />
+
+  <QuickAction
+    icon="📚"
+    title="درس الأسبوع"
+    onClick={() => goTo("/weekly-lesson")}
+  />
+</div>
 
             {/* 3. Team Ranking Section */}
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-xl sm:p-6">
@@ -527,6 +536,7 @@ function QuickAction({
       <span className="text-2xl sm:text-3xl">{icon}</span>
       <span className="text-xs font-bold text-slate-200 sm:text-sm">{title}</span>
     </button>
+    
   );
 }
 
@@ -549,6 +559,7 @@ function SidebarNavigation({
     { name: "سر الاعتراف", path: "/confession", icon: "✝️" },
     { name: "تسميع المزمور", path: "/psalm", icon: "📖" },
     { name: "تعديل النقاط", path: "/points", icon: "⭐" },
+    { name: "درس الأسبوع", path: "/weekly-lesson", icon: "📖" },
   ];
 
   return (

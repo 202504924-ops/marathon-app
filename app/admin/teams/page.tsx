@@ -21,63 +21,88 @@ export default function TeamsAdmin() {
   }, []);
 
 
+
   async function loadTeams() {
 
     setLoading(true);
 
-    const teamsResult = await supabase
-      .from("teams")
-      .select("id,name,points")
-      .order("id");
 
-
-    const childrenResult = await supabase
-      .from("children")
-      .select("team_id");
-
-
-    const children = childrenResult.data || [];
-
-
-    const data = (teamsResult.data || []).map((team)=>({
-
-      id: team.id,
-      name: team.name,
-      points: team.points || 0,
-
-      childrenCount:
-        children.filter(
-          child => child.team_id === team.id
-        ).length
-
-    }));
-
-
-    setTeams(data);
-
-    setLoading(false);
-  }
+    const { data: teamsData, error: teamsError } =
+      await supabase
+        .from("teams")
+        .select("id,name,points")
+        .order("id");
 
 
 
-  async function deleteTeam(id:number){
+    if (teamsError) {
 
-    const ok = confirm(
-      "هل تريد حذف الفريق؟"
+      console.log(
+        "LOAD TEAMS ERROR:",
+        teamsError
+      );
+
+      alert(teamsError.message);
+
+      setLoading(false);
+
+      return;
+    }
+
+
+
+
+    const { data: childrenData, error: childrenError } =
+      await supabase
+        .from("children")
+        .select("team_id");
+
+
+
+    if (childrenError) {
+
+      console.log(
+        "LOAD CHILDREN ERROR:",
+        childrenError
+      );
+
+    }
+
+
+
+    const children = childrenData || [];
+
+
+
+    const formattedTeams = (teamsData || []).map(
+      (team)=>({
+
+        id: team.id,
+
+        name: team.name,
+
+        points: team.points || 0,
+
+
+        childrenCount:
+          children.filter(
+            child =>
+              child.team_id === team.id
+          ).length
+
+      })
     );
 
-    if(!ok) return;
 
 
-    await supabase
-      .from("teams")
-      .delete()
-      .eq("id",id);
+    setTeams(formattedTeams);
 
-
-    loadTeams();
+    setLoading(false);
 
   }
+
+
+
 
 
 
@@ -85,6 +110,7 @@ export default function TeamsAdmin() {
     id:number,
     oldName:string
   ){
+
 
     const name = prompt(
       "اسم الفريق الجديد",
@@ -95,12 +121,34 @@ export default function TeamsAdmin() {
     if(!name) return;
 
 
-    await supabase
+
+    const {error} = await supabase
       .from("teams")
       .update({
-        name:name
+        name:name.trim()
       })
       .eq("id",id);
+
+
+
+    if(error){
+
+      console.log(
+        "UPDATE ERROR:",
+        error
+      );
+
+      alert(error.message);
+
+      return;
+
+    }
+
+
+
+    alert(
+      "تم تعديل الفريق ✅"
+    );
 
 
     loadTeams();
@@ -109,9 +157,66 @@ export default function TeamsAdmin() {
 
 
 
+
+
+
+  async function deleteTeam(
+    id:number
+  ){
+
+
+    const ok = confirm(
+      "هل تريد حذف الفريق؟"
+    );
+
+
+    if(!ok) return;
+
+
+
+    const {error} = await supabase
+      .from("teams")
+      .delete()
+      .eq("id",id);
+
+
+
+
+    if(error){
+
+      console.log(
+        "DELETE ERROR:",
+        error
+      );
+
+
+      alert(error.message);
+
+      return;
+
+    }
+
+
+
+    alert(
+      "تم حذف الفريق ✅"
+    );
+
+
+
+    loadTeams();
+
+  }
+
+
+
+
+
+
   if(loading){
 
     return(
+
       <main
         dir="rtl"
         style={{
@@ -121,15 +226,15 @@ export default function TeamsAdmin() {
           padding:"40px"
         }}
       >
+
         جاري تحميل الفرق...
+
       </main>
+
     );
 
   }
-
-
-
-  return (
+    return (
 
     <main
       dir="rtl"
@@ -148,36 +253,44 @@ export default function TeamsAdmin() {
         }}
       >
 
+
         <div
-  style={{
-    display:"flex",
-    justifyContent:"space-between",
-    alignItems:"center",
-    marginBottom:"25px"
-  }}
->
-  <h1>
-    🏆 إدارة الفرق
-  </h1>
+          style={{
+            display:"flex",
+            justifyContent:"space-between",
+            alignItems:"center",
+            marginBottom:"25px"
+          }}
+        >
 
-  <button
-    onClick={() =>
-      window.location.href="/admin/dashboard"
-    }
-    style={{
-      background:"#0d47a1",
-      color:"white",
-      border:"1px solid #2563eb",
-      padding:"10px 18px",
-      borderRadius:"12px",
-      cursor:"pointer",
-      fontWeight:"bold"
-    }}
-  >
-    ← رجوع
-  </button>
+          <h1>
+            🏆 إدارة الفرق
+          </h1>
 
-</div>
+
+          <button
+            onClick={() =>
+              window.location.href="/admin/dashboard"
+            }
+            style={{
+              background:"#0d47a1",
+              color:"white",
+              border:"1px solid #2563eb",
+              padding:"10px 18px",
+              borderRadius:"12px",
+              cursor:"pointer",
+              fontWeight:"bold"
+            }}
+          >
+
+            ← رجوع
+
+          </button>
+
+
+        </div>
+
+
 
 
 
@@ -187,9 +300,12 @@ export default function TeamsAdmin() {
             لا يوجد فرق
           </p>
 
+
         ) : (
 
-          teams.map(team=>(
+
+          teams.map(team => (
+
 
             <div
               key={team.id}
@@ -205,24 +321,47 @@ export default function TeamsAdmin() {
               }}
             >
 
+
+
               <div>
+
 
                 <h2>
                   {team.name}
                 </h2>
 
 
-                <p style={{color:"#94a3b8"}}>
-                  👦 الأطفال: {team.childrenCount}
+
+                <p
+                  style={{
+                    color:"#94a3b8"
+                  }}
+                >
+
+                  👦 الأطفال:
+                  {" "}
+                  {team.childrenCount}
+
                 </p>
 
 
-                <p style={{color:"#60a5fa"}}>
-                  ⭐ النقاط: {team.points}
+
+                <p
+                  style={{
+                    color:"#60a5fa"
+                  }}
+                >
+
+                  ⭐ النقاط:
+                  {" "}
+                  {team.points}
+
                 </p>
 
 
               </div>
+
+
 
 
 
@@ -233,8 +372,10 @@ export default function TeamsAdmin() {
                 }}
               >
 
+
+
                 <button
-                  onClick={()=>
+                  onClick={() =>
                     editTeam(
                       team.id,
                       team.name
@@ -249,13 +390,20 @@ export default function TeamsAdmin() {
                     cursor:"pointer"
                   }}
                 >
+
                   تعديل
+
                 </button>
 
 
+
+
+
                 <button
-                  onClick={()=>
-                    deleteTeam(team.id)
+                  onClick={() =>
+                    deleteTeam(
+                      team.id
+                    )
                   }
                   style={{
                     background:"#dc2626",
@@ -266,22 +414,33 @@ export default function TeamsAdmin() {
                     cursor:"pointer"
                   }}
                 >
+
                   حذف
+
                 </button>
+
 
 
               </div>
 
 
+
             </div>
+
 
           ))
 
+
         )}
 
+
+
       </div>
+
 
     </main>
 
   );
+
+
 }
