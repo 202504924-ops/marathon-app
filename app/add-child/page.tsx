@@ -19,322 +19,520 @@ type Child = {
   gender: Gender;
 };
 
+
 export default function AddChild() {
+
   const [teams, setTeams] = useState<Team[]>([]);
+
   const [name, setName] = useState("");
   const [teamId, setTeamId] = useState("");
   const [gender, setGender] = useState<Gender | "">("");
+
+  // بيانات الأسرة
+  const [fatherName, setFatherName] = useState("");
+  const [fatherPhone, setFatherPhone] = useState("");
+
+  const [motherName, setMotherName] = useState("");
+  const [motherPhone, setMotherPhone] = useState("");
+
+  const [address, setAddress] = useState("");
+  const [childPhone, setChildPhone] = useState("");
+
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
   const [addedChild, setAddedChild] = useState<Child | null>(null);
 
-  useEffect(() => {
-    async function getTeams() {
-      const { data, error } = await supabase
-        .from("teams")
-        .select("id, name")
-        .order("id");
 
-      if (error) {
-        console.error(
-          "GET TEAMS ERROR:",
-          JSON.stringify(error, null, 2)
-        );
+
+  useEffect(() => {
+
+    async function getTeams(){
+
+      const {data,error}=await supabase
+      .from("teams")
+      .select("id,name")
+      .order("id");
+
+
+      if(error){
+        console.log(error);
         return;
       }
 
+
       setTeams(data || []);
+
     }
 
-    getTeams();
-  }, []);
 
-  async function addChild() {
+    getTeams();
+
+  },[]);
+
+
+
+
+  async function addChild(){
+
     setMessage("");
     setAddedChild(null);
 
-    const cleanName = name.trim();
 
-    if (!cleanName) {
+    const cleanName=name.trim();
+
+
+    if(!cleanName){
       setMessage("اكتب اسم الطفل أولاً");
       return;
     }
 
-    if (!gender) {
-      setMessage("اختار نوع الطفل أولاً");
+
+    if(!gender){
+      setMessage("اختار نوع الطفل");
       return;
     }
 
-    if (!teamId) {
-      setMessage("اختار فريق الطفل أولاً");
+
+    if(!teamId){
+      setMessage("اختار الفريق");
       return;
     }
+
+
 
     setLoading(true);
 
-    try {
-      const { data: existingChild, error: checkError } =
-        await supabase
-          .from("children")
-          .select("id, name")
-          .eq("name", cleanName)
-          .eq("team_id", Number(teamId))
-          .maybeSingle();
 
-      if (checkError) {
-        console.error(
-          "CHECK CHILD ERROR:",
-          JSON.stringify(checkError, null, 2)
-        );
 
-        setMessage("حصل خطأ أثناء التأكد من الاسم");
+    try{
+
+
+      const {data:existingChild}=await supabase
+      .from("children")
+      .select("id")
+      .eq("name",cleanName)
+      .eq("team_id",Number(teamId))
+      .maybeSingle();
+
+
+
+      if(existingChild){
+
+        setMessage("الطفل موجود بالفعل في الفريق");
         return;
+
       }
 
-      if (existingChild) {
-        setMessage("الاسم دا موجود فعلاً في الفريق");
+
+
+      const qrToken=crypto.randomUUID();
+
+
+
+      const {data:newChild,error}=await supabase
+      .from("children")
+      .insert({
+
+        name:cleanName,
+
+        team_id:Number(teamId),
+
+        gender,
+
+        qr_token:qrToken,
+
+
+        father_name:fatherName,
+
+        father_phone:fatherPhone,
+
+
+        mother_name:motherName,
+
+        mother_phone:motherPhone,
+
+
+        address,
+
+        child_phone:childPhone
+
+      })
+      .select(
+        "id,name,team_id,gender,qr_token"
+      )
+      .single();
+
+
+
+
+      if(error){
+
+        console.log(error);
+
+        setMessage(error.message);
+
         return;
+
       }
 
-      const qrToken = crypto.randomUUID();
 
-      const { data: newChild, error: insertError } =
-        await supabase
-          .from("children")
-          .insert({
-            name: cleanName,
-            team_id: Number(teamId),
-            gender: gender,
-            qr_token: qrToken,
-          })
-          .select("id, name, team_id, gender, qr_token")
-          .single();
-
-      if (insertError) {
-        console.error(
-          "ADD CHILD ERROR:",
-          JSON.stringify(insertError, null, 2)
-        );
-
-        if (insertError.code === "23505") {
-          setMessage("الاسم دا موجود فعلاً في الفريق");
-        } else {
-          setMessage(
-            `حصل خطأ أثناء إضافة الطفل: ${insertError.message}`
-          );
-        }
-
-        return;
-      }
 
       setAddedChild(newChild);
+
+
+
       setName("");
       setTeamId("");
       setGender("");
 
-      setMessage("تم إضافة الطفل بنجاح");
-    } finally {
+      setFatherName("");
+      setFatherPhone("");
+
+      setMotherName("");
+      setMotherPhone("");
+
+      setAddress("");
+      setChildPhone("");
+
+
+      setMessage("تم إضافة الطفل بنجاح ✅");
+
+
+
+    }finally{
+
       setLoading(false);
+
     }
+
+
   }
 
-  function downloadQR() {
-    if (!addedChild) return;
 
-    const canvas = document.getElementById(
+
+
+
+  function downloadQR(){
+
+    if(!addedChild)return;
+
+
+    const canvas=document.getElementById(
       "child-qr"
-    ) as HTMLCanvasElement | null;
+    ) as HTMLCanvasElement;
 
-    if (!canvas) {
-      setMessage("مش قادر أحمل الـQR حالياً");
-      return;
-    }
 
-    const image = canvas.toDataURL("image/png");
 
-    const link = document.createElement("a");
-    link.href = image;
-    link.download = `${addedChild.name}-QR.png`;
+    if(!canvas)return;
 
-    document.body.appendChild(link);
+
+
+    const image=canvas.toDataURL("image/png");
+
+
+    const link=document.createElement("a");
+
+    link.href=image;
+
+    link.download=`${addedChild.name}-QR.png`;
+
     link.click();
-    document.body.removeChild(link);
+
+
   }
 
-  const addedTeam = teams.find(
-    (team) => team.id === addedChild?.team_id
+
+
+  const addedTeam=teams.find(
+    t=>t.id===addedChild?.team_id
   );
 
-  return (
-    <main
-      dir="rtl"
-      className="min-h-screen bg-slate-950 px-4 py-6 text-white sm:px-6"
-    >
-      <div className="mx-auto w-full max-w-xl">
 
-        {/* Back Button */}
+
+  return (
+        <main
+      dir="rtl"
+      className="min-h-screen bg-slate-950 px-4 py-6 text-white"
+    >
+
+      <div className="mx-auto max-w-xl">
+
+
         <button
-          type="button"
-          onClick={() =>
-            (window.location.href = "/servant/dashboard")
-          }
-          className="mb-6 text-sm text-slate-400 transition hover:text-white"
+          onClick={()=>window.location.href="/servant/dashboard"}
+          className="mb-6 text-sm text-slate-400"
         >
           ← رجوع للوحة التحكم
         </button>
 
-        <p className="mb-2 text-sm text-blue-400">
-          ماراثون الخدمة
-        </p>
+
 
         <h1 className="text-3xl font-bold">
           إضافة طفل
         </h1>
 
+
         <p className="mt-2 text-slate-400">
-          أضف بيانات الطفل واربطه بفريقه.
+          أضف بيانات الطفل وبيانات الأسرة.
         </p>
 
-        <div className="mt-8 space-y-5 rounded-3xl border border-slate-800 bg-slate-900 p-5 sm:p-7">
-          <div>
-            <label className="mb-2 block text-sm text-slate-300">
-              اسم الطفل
-            </label>
 
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="اكتب اسم الطفل"
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-500"
-            />
-          </div>
+
+        <div className="mt-8 space-y-5 rounded-3xl border border-slate-800 bg-slate-900 p-6">
+
+
+
+          <input
+            value={name}
+            onChange={(e)=>setName(e.target.value)}
+            placeholder="اسم الطفل"
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3"
+          />
+
+
 
           <div>
-            <label className="mb-2 block text-sm text-slate-300">
+
+            <p className="mb-2 text-sm text-slate-300">
               النوع
-            </label>
+            </p>
+
 
             <div className="grid grid-cols-2 gap-3">
+
               <button
-                type="button"
-                onClick={() => setGender("male")}
-                className={`rounded-xl border px-4 py-4 font-bold transition ${
-                  gender === "male"
-                    ? "border-blue-500 bg-blue-500/15 text-blue-400"
-                    : "border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800"
+                onClick={()=>setGender("male")}
+                className={`rounded-xl border p-3 ${
+                  gender==="male"
+                  ?"border-blue-500 bg-blue-500/20"
+                  :"border-slate-700"
                 }`}
               >
                 ولد
               </button>
 
+
+
               <button
-                type="button"
-                onClick={() => setGender("female")}
-                className={`rounded-xl border px-4 py-4 font-bold transition ${
-                  gender === "female"
-                    ? "border-pink-500 bg-pink-500/15 text-pink-400"
-                    : "border-slate-700 bg-slate-950 text-slate-400 hover:bg-slate-800"
+                onClick={()=>setGender("female")}
+                className={`rounded-xl border p-3 ${
+                  gender==="female"
+                  ?"border-pink-500 bg-pink-500/20"
+                  :"border-slate-700"
                 }`}
               >
                 بنت
               </button>
+
             </div>
+
           </div>
 
-          <div>
-            <label className="mb-2 block text-sm text-slate-300">
-              الفريق
-            </label>
 
-            <select
-              value={teamId}
-              onChange={(e) => setTeamId(e.target.value)}
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none focus:border-blue-500"
-            >
-              <option value="">
-                اختار الفريق
+
+
+
+          <select
+            value={teamId}
+            onChange={(e)=>setTeamId(e.target.value)}
+            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3"
+          >
+
+            <option value="">
+              اختار الفريق
+            </option>
+
+
+            {teams.map(team=>(
+
+              <option
+                key={team.id}
+                value={team.id}
+              >
+                {team.name}
               </option>
 
-              {teams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
+            ))}
+
+
+          </select>
+
+
+
+
+
+          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
+
+
+            <h2 className="font-bold text-lg">
+              👨‍👩‍👦 بيانات الأسرة
+            </h2>
+
+
+
+            <input
+              value={fatherName}
+              onChange={(e)=>setFatherName(e.target.value)}
+              placeholder="اسم الأب"
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
+            />
+
+
+
+            <input
+              value={fatherPhone}
+              onChange={(e)=>setFatherPhone(e.target.value)}
+              placeholder="رقم الأب"
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
+            />
+
+
+
+            <input
+              value={motherName}
+              onChange={(e)=>setMotherName(e.target.value)}
+              placeholder="اسم الأم"
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
+            />
+
+
+
+            <input
+              value={motherPhone}
+              onChange={(e)=>setMotherPhone(e.target.value)}
+              placeholder="رقم الأم"
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
+            />
+
+
+
+            <input
+              value={address}
+              onChange={(e)=>setAddress(e.target.value)}
+              placeholder="العنوان"
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
+            />
+
+
+
+            <input
+              value={childPhone}
+              onChange={(e)=>setChildPhone(e.target.value)}
+              placeholder="رقم الطفل (اختياري)"
+              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
+            />
+
+
           </div>
 
+
+
+
+
           <button
-            type="button"
             onClick={addChild}
             disabled={loading}
-            className="w-full rounded-xl bg-blue-600 py-3 font-bold transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-xl bg-blue-600 py-3 font-bold"
           >
-            {loading ? "جاري الإضافة..." : "إضافة الطفل"}
+
+            {loading 
+            ? "جاري الإضافة..."
+            : "إضافة الطفل"
+            }
+
           </button>
 
+
+
           {message && (
-            <div className="rounded-xl border border-slate-700 bg-slate-950 p-3 text-center text-sm">
+
+            <div className="rounded-xl bg-slate-950 p-3 text-center">
               {message}
             </div>
+
           )}
 
+
+
+
+
           {addedChild && (
-            <div className="mt-6 rounded-2xl border border-slate-700 bg-white p-5 text-center text-slate-900">
+
+            <div className="rounded-2xl bg-white p-5 text-center text-black">
+
+
               <h2 className="text-xl font-bold">
-                تم إضافة الطفل بنجاح
+                تم إضافة الطفل ✅
               </h2>
 
-              <p className="mt-2 text-lg font-semibold">
+
+              <p className="mt-2 text-lg font-bold">
                 {addedChild.name}
               </p>
 
+
               {addedTeam && (
-                <p className="mt-1 text-sm text-slate-500">
+
+                <p className="text-sm text-slate-500">
                   الفريق: {addedTeam.name}
                 </p>
+
               )}
 
-              <p className="mt-1 text-sm text-slate-500">
-                النوع:{" "}
-                {addedChild.gender === "male"
-                  ? "ولد"
-                  : "بنت"}
-              </p>
+
+
 
               <div className="mt-5 flex justify-center">
-                <div className="rounded-2xl bg-white p-4 shadow-lg">
-                  <QRCodeCanvas
-                    id="child-qr"
-                    value={addedChild.qr_token}
-                    size={260}
-                    level="H"
-                    includeMargin={true}
-                  />
-                </div>
+
+                <QRCodeCanvas
+
+                  id="child-qr"
+
+                  value={addedChild.qr_token}
+
+                  size={250}
+
+                  level="H"
+
+                  includeMargin
+
+                />
+
               </div>
 
-              <p className="mt-4 text-sm text-slate-500">
-                ID الطفل
-              </p>
 
-              <p className="font-bold">
-                {addedChild.id}
-              </p>
+
 
               <button
-                type="button"
+
                 onClick={downloadQR}
-                className="mt-5 w-full rounded-xl bg-slate-900 py-3 font-bold text-white transition hover:bg-slate-800"
+
+                className="mt-5 w-full rounded-xl bg-slate-900 py-3 font-bold text-white"
+
               >
-                تحميل QR كصورة
+
+                تحميل QR
+
               </button>
+
+
+
             </div>
+
           )}
+
+
         </div>
+
+
       </div>
+
+
     </main>
+
   );
+
+
 }

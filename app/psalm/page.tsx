@@ -23,8 +23,11 @@ export default function PsalmPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  
   const [errorMessage, setErrorMessage] = useState("");
-
+  const [showRecited, setShowRecited] = useState(false);
+const [showNotRecited, setShowNotRecited] = useState(false);
+ const [recitedChildren, setRecitedChildren] = useState<number[]>([]);
   useEffect(() => {
     const saved = localStorage.getItem("marathon_user");
 
@@ -53,7 +56,7 @@ export default function PsalmPage() {
     setErrorMessage("");
 
     try {
-      const [childrenResult, teamsResult] = await Promise.all([
+     const [childrenResult, teamsResult, psalmResult] = await Promise.all([
         supabase
           .from("children")
           .select("id, name, team_id")
@@ -63,6 +66,9 @@ export default function PsalmPage() {
           .from("teams")
           .select("id, name")
           .order("name"),
+        supabase
+          .from("psalm_recitations")
+          .select("child_id")
       ]);
 
       if (childrenResult.error) {
@@ -75,6 +81,11 @@ export default function PsalmPage() {
 
       setChildren((childrenResult.data || []) as Child[]);
       setTeams((teamsResult.data || []) as Team[]);
+      setRecitedChildren(
+  (psalmResult.data || []).map(
+    (item) => item.child_id
+  )
+);
     } catch (error) {
       console.error("PSALM LOAD ERROR:", error);
 
@@ -85,10 +96,25 @@ export default function PsalmPage() {
   }
 
   function getTeamName(teamId: number) {
+    
     const team = teams.find((item) => item.id === teamId);
 
     return team?.name || "بدون فريق";
   }
+
+  function hasRecited(childId: number) {
+  return recitedChildren.includes(childId);
+}
+
+const recitedList = children.filter((child) =>
+  hasRecited(child.id)
+);
+
+const notRecitedList = children.filter((child) =>
+  !hasRecited(child.id)
+);
+
+  
 
   async function checkAlreadyRecited(childId: number) {
     const { data, error } = await supabase
@@ -130,22 +156,27 @@ export default function PsalmPage() {
 
       // تسجيل التسميع
       const { error: psalmError } = await supabase
-        .from("psalm_recitations")
-        .insert({
-          child_id: selectedChild.id,
-        });
+  .from("psalm_recitations")
+  .insert({
+    child_id: selectedChild.id,
+  });
 
-      if (psalmError) {
-        // 23505 = الطفل مسجل قبل كده
-        if (psalmError.code === "23505") {
-          setErrorMessage(
-            `الطفل ${selectedChild.name} مسجّل إنه سمّع المزمور بالفعل.`
-          );
-          return;
-        }
+if (psalmError) {
+  if (psalmError.code === "23505") {
+    setErrorMessage(
+      `الطفل ${selectedChild.name} مسجّل إنه سمّع المزمور بالفعل.`
+    );
+    return;
+  }
 
-        throw psalmError;
-      }
+  throw psalmError;
+}
+
+
+setRecitedChildren((prev) => [
+  ...prev,
+  selectedChild.id,
+]);
 
       // إضافة 20 نقطة للفريق
       const { error: pointsError } = await supabase
@@ -556,6 +587,8 @@ export default function PsalmPage() {
             </div>
           )}
 
+          
+
           {/* SAVE BUTTON */}
 
           <button
@@ -590,6 +623,117 @@ export default function PsalmPage() {
               ? "جاري التسجيل..."
               : "✓ تسجيل تسميع المزمور +20 نقطة"}
           </button>
+
+
+          {/* RECITED BOX */}
+
+<div
+  style={{
+    marginTop: "25px",
+    background: "#0b1321",
+    border: "1px solid #1c3554",
+    borderRadius: "20px",
+    padding: "20px",
+  }}
+>
+  <h3
+    style={{
+      marginBottom: "15px",
+      fontSize: "18px",
+    }}
+  >
+    متابعة التسميع
+  </h3>
+
+  <div
+    style={{
+      display: "flex",
+      gap: "12px",
+    }}
+  >
+
+    <button
+      onClick={() => {
+        setShowRecited(!showRecited);
+        setShowNotRecited(false);
+      }}
+      style={{
+        flex: 1,
+        background: "#064e3b",
+        color: "#86efac",
+        border: "1px solid #166534",
+        padding: "14px",
+        borderRadius: "14px",
+        cursor: "pointer",
+        fontWeight: "bold",
+      }}
+    >
+      ✅ اللي سمّعوا ({recitedList.length})
+    </button>
+
+
+    <button
+      onClick={() => {
+        setShowNotRecited(!showNotRecited);
+        setShowRecited(false);
+      }}
+      style={{
+        flex: 1,
+        background: "#3f1d1d",
+        color: "#fca5a5",
+        border: "1px solid #7f1d1d",
+        padding: "14px",
+        borderRadius: "14px",
+        cursor: "pointer",
+        fontWeight: "bold",
+      }}
+    >
+      ❌ اللي لسه ({notRecitedList.length})
+    </button>
+
+  </div>
+
+
+  {showRecited && (
+    <div
+      style={{
+        marginTop: "15px",
+        background: "#07140f",
+        borderRadius: "15px",
+        padding: "15px",
+      }}
+    >
+      <h4>الأطفال اللي سمّعوا</h4>
+
+      {recitedList.map((child) => (
+        <p key={child.id}>
+          ✅ {child.name} - فريق {getTeamName(child.team_id)}
+        </p>
+      ))}
+    </div>
+  )}
+
+
+  {showNotRecited && (
+    <div
+      style={{
+        marginTop: "15px",
+        background: "#160909",
+        borderRadius: "15px",
+        padding: "15px",
+      }}
+    >
+      <h4>الأطفال اللي لسه ما سمّعوش</h4>
+
+      {notRecitedList.map((child) => (
+        <p key={child.id}>
+          ❌ {child.name} - فريق {getTeamName(child.team_id)}
+        </p>
+      ))}
+    </div>
+  )}
+
+</div>
         </section>
 
         <div

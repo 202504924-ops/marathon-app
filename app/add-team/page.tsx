@@ -65,12 +65,19 @@ export default function AddTeamPage() {
     points: 0,
   });
 
-      if (error) {
-        console.error(error);
-        setMessage("حصل خطأ أثناء إضافة الفريق");
-        setLoading(false);
-        return;
-      }
+     if (error) {
+  console.log("ADD TEAM ERROR MESSAGE:", error.message);
+  console.log("ADD TEAM ERROR DETAILS:", error.details);
+  console.log("ADD TEAM ERROR HINT:", error.hint);
+
+  alert(
+    error.message ||
+    "خطأ غير معروف"
+  );
+
+  setLoading(false);
+  return;
+}
 
       setTeamName("");
       setMessage("تم إضافة الفريق بنجاح");

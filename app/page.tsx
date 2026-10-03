@@ -917,17 +917,16 @@ function deleteQuestion(index: number) {
 <div className="mb-5 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
 
   <p className="mb-2 text-sm text-green-400">
-    📖 الكتاب المقدس
+    قراءة الكتاب المقدس
   </p>
 
   <h2 className="text-lg font-bold sm:text-xl">
-    قراءة اليوم
+    قراءة اليوم 📖
   </h2>
 
   <p className="mt-2 text-sm leading-6 text-slate-400 sm:text-base">
-    اقرأ الإصحاح المطلوب وأجب على سؤال اليوم لتحصل على نقاط فريقك.
+    اقرأ الإصحاح المحدد وجاوب على سؤال اليوم لتحصل على نقطتين لفريقك.
   </p>
-
 
   <button
     type="button"
@@ -936,7 +935,7 @@ function deleteQuestion(index: number) {
     }}
     className="mt-4 w-full rounded-xl bg-green-600 py-3 font-bold transition hover:bg-green-500"
   >
-    دخول الكتاب المقدس 📖
+    دخول قراءة الكتاب المقدس ✝️
   </button>
 
 </div>

@@ -35,6 +35,8 @@ export default function MassPage() {
   const [registering, setRegistering] = useState(false);
 
   const [weekStart, setWeekStart] = useState("");
+  const [showPresent, setShowPresent] = useState(false);
+const [showAbsent, setShowAbsent] = useState(false);
 
   useEffect(() => {
     const currentWeekStart = getMassWeekStart();
@@ -597,6 +599,13 @@ export default function MassPage() {
 
   const currentWeekAttendance =
     massAttendance.length;
+    const presentChildren = children.filter((child) =>
+  hasAttendedMass(child.id)
+);
+
+const absentChildren = children.filter((child) =>
+  !hasAttendedMass(child.id)
+);
 
   return (
     <main
@@ -657,6 +666,14 @@ export default function MassPage() {
           </p>
 
         </div>
+
+        </div>  
+
+
+
+
+{/* التسجيل */}
+<div className="mt-5 rounded-3xl border border-slate-800 bg-slate-900 p-5 sm:p-7">
 
         {/* التسجيل */}
         <div className="mt-5 rounded-3xl border border-slate-800 bg-slate-900 p-5 sm:p-7">
@@ -810,6 +827,79 @@ export default function MassPage() {
               {message}
             </div>
           )}
+
+{/* قائمة حضور وغياب القداس */}
+
+<div className="mt-5 space-y-4">
+
+  {/* الحاضرين */}
+  <button
+    type="button"
+    onClick={() => setShowPresent(!showPresent)}
+    className="flex w-full items-center justify-between rounded-2xl border border-green-500/30 bg-green-500/10 p-4"
+  >
+    <span className="font-bold text-green-400">
+      ✅ حضروا القداس ({presentChildren.length})
+    </span>
+
+    <span>
+      {showPresent ? "▲" : "▼"}
+    </span>
+
+  </button>
+
+
+  {showPresent && (
+    <div className="rounded-2xl bg-slate-950 p-4">
+
+      {presentChildren.map((child)=>(
+        <div
+          key={child.id}
+          className="mb-2 rounded-xl bg-slate-900 p-3"
+        >
+          {child.name}
+        </div>
+      ))}
+
+    </div>
+  )}
+
+
+
+  {/* الغائبين */}
+  <button
+    type="button"
+    onClick={() => setShowAbsent(!showAbsent)}
+    className="flex w-full items-center justify-between rounded-2xl border border-red-500/30 bg-red-500/10 p-4"
+  >
+
+    <span className="font-bold text-red-400">
+      ❌ لم يحضروا القداس ({absentChildren.length})
+    </span>
+
+    <span>
+      {showAbsent ? "▲" : "▼"}
+    </span>
+
+  </button>
+
+
+  {showAbsent && (
+    <div className="rounded-2xl bg-slate-950 p-4">
+
+      {absentChildren.map((child)=>(
+        <div
+          key={child.id}
+          className="mb-2 rounded-xl bg-slate-900 p-3"
+        >
+          {child.name}
+        </div>
+      ))}
+
+    </div>
+  )}
+
+</div>
 
         </div>
 

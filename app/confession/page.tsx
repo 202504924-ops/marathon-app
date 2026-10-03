@@ -30,6 +30,8 @@ export default function ConfessionPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
+  const [showConfessed, setShowConfessed] = useState(false);
+const [showNotConfessed, setShowNotConfessed] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -199,6 +201,13 @@ export default function ConfessionPage() {
       .toLowerCase()
       .includes(search.toLowerCase())
   );
+  const confessedChildren = children.filter((child) =>
+  hasConfessed(child.id)
+);
+
+const notConfessedChildren = children.filter((child) =>
+  !hasConfessed(child.id)
+);
 
   return (
     <main
@@ -355,6 +364,97 @@ export default function ConfessionPage() {
           )}
 
         </div>
+
+{/* قوائم الاعتراف */}
+
+<div className="mt-5 space-y-4">
+
+  {/* زرار اللي اعترفوا */}
+  <button
+    type="button"
+    onClick={() =>
+      setShowConfessed(!showConfessed)
+    }
+    className="flex w-full items-center justify-between rounded-2xl border border-green-500/30 bg-green-500/10 p-4 text-right"
+  >
+    <span className="font-bold text-green-400">
+      ✅ اعترفوا ({confessedChildren.length})
+    </span>
+
+    <span>
+      {showConfessed ? "▲" : "▼"}
+    </span>
+  </button>
+
+
+  {showConfessed && (
+    <div className="rounded-2xl border border-green-500/20 bg-slate-950 p-4">
+
+      {confessedChildren.length === 0 ? (
+        <p className="text-sm text-slate-400">
+          لا يوجد أطفال اعترفوا حتى الآن
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {confessedChildren.map((child) => (
+            <div
+              key={child.id}
+              className="rounded-xl bg-slate-900 p-3"
+            >
+              {child.name}
+            </div>
+          ))}
+        </div>
+      )}
+
+    </div>
+  )}
+
+
+
+  {/* زرار اللي معترفوش */}
+  <button
+    type="button"
+    onClick={() =>
+      setShowNotConfessed(!showNotConfessed)
+    }
+    className="flex w-full items-center justify-between rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-right"
+  >
+    <span className="font-bold text-red-400">
+      ❌ لم يعترفوا ({notConfessedChildren.length})
+    </span>
+
+    <span>
+      {showNotConfessed ? "▲" : "▼"}
+    </span>
+  </button>
+
+
+  {showNotConfessed && (
+    <div className="rounded-2xl border border-red-500/20 bg-slate-950 p-4">
+
+      {notConfessedChildren.length === 0 ? (
+        <p className="text-sm text-slate-400">
+          كل الأطفال اعترفوا 🎉
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {notConfessedChildren.map((child) => (
+            <div
+              key={child.id}
+              className="rounded-xl bg-slate-900 p-3"
+            >
+              {child.name}
+            </div>
+          ))}
+        </div>
+      )}
+
+    </div>
+  )}
+
+</div>
+
       </div>
     </main>
   );
