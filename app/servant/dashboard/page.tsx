@@ -610,7 +610,7 @@ overflow-hidden
 <div
 
 className="
-fixed
+absolute
 inset-0
 pointer-events-none
 bg-linear-to-br
