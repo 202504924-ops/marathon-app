@@ -5,21 +5,6 @@ import { supabase } from "@/lib/supabase";
 
 type Gender = "male" | "female" | null;
 
-type Child = {
-  id: number;
-  name: string;
-  team_id: number;
-  gender: Gender;
-};
-
-type Servant = {
-  id: number;
-  name: string;
-  password: string;
-  gender: Gender;
-  role: "servant" | "admin";
-};
-
 type LoggedUser = {
   id: number;
   name: string;
@@ -39,909 +24,1958 @@ type TeamPoint = {
   points: number;
 };
 
-export default function Home() {
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [needPassword, setNeedPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-
-  const [loggedUser, setLoggedUser] =
-    useState<LoggedUser | null>(null);
-
-  // بيانات Dashboard الطفل
-  const [teamName, setTeamName] = useState("جاري التحميل...");
-  const [teamPoints, setTeamPoints] = useState(0);
-  const [teamRank, setTeamRank] = useState(0);
-  const [attendancePercentage, setAttendancePercentage] = useState(0);
-  const [attendanceCount, setAttendanceCount] = useState(0);
-  const [dashboardLoading, setDashboardLoading] = useState(false);
-
-type QuestionItem = {
-  question: string;
-  answers: string[];
-  correctIndex: number | null;
+type RankingTeam = {
+  teamId: number;
+  name: string;
   points: number;
+  rank: number;
 };
 
-const [questions, setQuestions] = useState<QuestionItem[]>([]);
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem("marathon_user");
+export default function Home() {
 
-    if (savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
 
-        setLoggedUser(user);
+  // =============================
+  // LOGIN STATES
+  // =============================
 
-        // لو طفل، نحمل بيانات الـ Dashboard
-        if (user.type === "child") {
-          loadChildDashboard(user);
-        }
+  const [name,setName] = useState("");
+  const [password,setPassword] = useState("");
 
-        // لو Admin أو Servant موجود بالفعل
-        // نحوله تلقائيًا للوحة الخاصة به
-        if (user.type === "servant") {
-          if (user.role === "admin") {
-            window.location.href = "/admin/dashboard";
-          } else {
-            window.location.href = "/servant/dashboard";
-          }
-        }
-      } catch {
-        localStorage.removeItem("marathon_user");
+  const [needPassword,setNeedPassword] =
+  useState(false);
+
+  const [loading,setLoading] =
+  useState(false);
+
+  const [message,setMessage] =
+  useState("");
+
+  const [loggedUser,setLoggedUser] =
+  useState<LoggedUser | null>(null);
+
+
+
+  // =============================
+  // CHILD DASHBOARD
+  // =============================
+
+
+  const [teamName,setTeamName] =
+  useState("...");
+
+  const [teamPoints,setTeamPoints] =
+  useState(0);
+
+  const [teamRank,setTeamRank] =
+  useState(0);
+
+  const [ranking,setRanking] =
+  useState<RankingTeam[]>([]);
+
+  const [dashboardLoading,setDashboardLoading] =
+  useState(false);
+
+
+
+  // =============================
+  // LOAD USER
+  // =============================
+
+
+  useEffect(()=>{
+
+    const saved =
+    localStorage.getItem(
+      "marathon_user"
+    );
+
+
+    if(!saved) return;
+
+
+    try{
+
+
+      const user =
+      JSON.parse(saved);
+
+
+      setLoggedUser(user);
+
+
+
+      if(user.type==="child"){
+
+        loadChildDashboard(user);
+
       }
-    }
-  }, []);
 
-  async function loadChildDashboard(user: LoggedUser) {
-    if (!user.team_id) {
-      return;
+
+
+      if(user.type==="servant"){
+
+
+        if(user.role==="admin"){
+
+          window.location.href =
+          "/admin/dashboard";
+
+        }else{
+
+          window.location.href =
+          "/servant/dashboard";
+
+        }
+
+      }
+
+
+
+    }catch{
+
+      localStorage.removeItem(
+        "marathon_user"
+      );
+
     }
+
+
+  },[]);
+
+
+
+
+
+  // =============================
+  // CHILD DASHBOARD DATA
+  // =============================
+
+
+  async function loadChildDashboard(
+    user:LoggedUser
+  ){
+
+
+    if(!user.team_id)
+    return;
+
 
     setDashboardLoading(true);
 
-    try {
-      // =========================
-      // جلب الفريق
-      // =========================
-      const { data: team, error: teamError } = await supabase
-        .from("teams")
-        .select("id, name")
-        .eq("id", user.team_id)
-        .maybeSingle();
 
-      if (teamError) {
-        console.error("TEAM DASHBOARD ERROR:", teamError);
-      }
 
-      if (team) {
-        setTeamName(team.name);
-      }
+    try{
 
-      // =========================
-      // جلب نقاط كل الفرق
-      // =========================
-      const { data: allPoints, error: pointsError } =
-        await supabase
-          .from("team_points")
-          .select("team_id, points");
 
-      if (pointsError) {
-        console.error(
-          "TEAM POINTS DASHBOARD ERROR:",
-          pointsError
-        );
-      }
-
-      const pointsByTeam: Record<number, number> = {};
-
-      (allPoints || []).forEach((item: TeamPoint) => {
-        if (!pointsByTeam[item.team_id]) {
-          pointsByTeam[item.team_id] = 0;
-        }
-
-        pointsByTeam[item.team_id] += Number(item.points) || 0;
-      });
-
-      const currentTeamPoints =
-        pointsByTeam[user.team_id] || 0;
-
-      setTeamPoints(currentTeamPoints);
-
-      // =========================
-      // حساب ترتيب الفريق
-      // =========================
-      const sortedPoints = Object.entries(pointsByTeam)
-        .map(([teamId, points]) => ({
-          teamId: Number(teamId),
-          points,
-        }))
-        .sort((a, b) => b.points - a.points);
-
-      // الفرق الموجودة بدون نقاط
-      const { data: allTeams, error: teamsError } =
-        await supabase
-          .from("teams")
-          .select("id, name");
-
-      if (teamsError) {
-        console.error(
-          "ALL TEAMS DASHBOARD ERROR:",
-          teamsError
-        );
-      }
-
-      const teams = (allTeams || []) as Team[];
-
-      const allTeamIds = new Set(
-        sortedPoints.map((item) => item.teamId)
-      );
-
-      teams.forEach((team) => {
-        if (!allTeamIds.has(team.id)) {
-          sortedPoints.push({
-            teamId: team.id,
-            points: 0,
-          });
-        }
-      });
-
-      sortedPoints.sort((a, b) => b.points - a.points);
-
-      const rankIndex = sortedPoints.findIndex(
-        (item) => item.teamId === user.team_id
-      );
-
-      if (rankIndex !== -1) {
-        setTeamRank(rankIndex + 1);
-      }
-
-      // =========================
-      // جلب حضور الطفل
-      // =========================
       const {
-        data: childAttendance,
-        error: attendanceError,
+        data:team
       } = await supabase
-        .from("attendance")
-        .select("attendance_date")
-        .eq("child_id", user.id);
 
-      if (attendanceError) {
-        console.error(
-          "CHILD ATTENDANCE DASHBOARD ERROR:",
-          attendanceError
+      .from("teams")
+
+      .select("id,name")
+
+      .eq(
+        "id",
+        user.team_id
+      )
+
+      .maybeSingle();
+
+
+
+      if(team){
+
+        setTeamName(
+          team.name
         );
+
       }
 
-      const attendanceDates = new Set(
-        (childAttendance || []).map(
-          (item) => item.attendance_date
-        )
+
+
+
+
+      const {
+        data:points
+      } = await supabase
+
+      .from("team_points")
+
+      .select(
+        "team_id,points"
       );
 
-      const childAttendanceCount =
-        attendanceDates.size;
 
-      setAttendanceCount(childAttendanceCount);
 
-      // =========================
-      // حساب نسبة الحضور
-      // =========================
+
       const {
-        data: allAttendance,
-        error: allAttendanceError,
+        data:teams
       } = await supabase
-        .from("attendance")
-        .select("attendance_date");
 
-      if (allAttendanceError) {
-        console.error(
-          "ALL ATTENDANCE DASHBOARD ERROR:",
-          allAttendanceError
+      .from("teams")
+
+      .select(
+        "id,name"
+      );
+
+
+
+
+
+      const pointMap:
+      Record<number,number>
+      = {};
+
+
+
+
+      (points || []).forEach(
+        (item:TeamPoint)=>{
+
+
+          if(!pointMap[item.team_id]){
+
+            pointMap[item.team_id]=0;
+
+          }
+
+
+          pointMap[item.team_id]
+          += Number(item.points)||0;
+
+
+
+        }
+      );
+
+
+
+
+
+      const rankingData:
+      RankingTeam[]
+      =
+      (teams || [])
+
+      .map(
+        (team:Team)=>({
+
+          teamId:team.id,
+
+          name:team.name,
+
+          points:
+          pointMap[team.id] || 0,
+
+          rank:0
+
+        })
+
+      )
+
+      .sort(
+        (a,b)=>
+        b.points-a.points
+      );
+
+
+
+
+      rankingData.forEach(
+        (team,index)=>{
+
+          team.rank=index+1;
+
+        }
+      );
+
+
+
+      setRanking(
+        rankingData
+      );
+
+
+
+
+      const current =
+      rankingData.find(
+        item =>
+        item.teamId===user.team_id
+      );
+
+
+
+      if(current){
+
+
+        setTeamPoints(
+          current.points
         );
+
+
+        setTeamRank(
+          current.rank
+        );
+
+
       }
 
-      const serviceDays = new Set(
-        (allAttendance || []).map(
-          (item) => item.attendance_date
-        )
-      ).size;
 
-      if (serviceDays > 0) {
-        const percentage = Math.round(
-          (childAttendanceCount / serviceDays) * 100
-        );
 
-        setAttendancePercentage(
-          Math.min(percentage, 100)
-        );
-      } else {
-        setAttendancePercentage(0);
-      }
-    } catch (error) {
-      console.error(
-        "CHILD DASHBOARD ERROR:",
+    }catch(error){
+
+
+      console.log(
+        "Dashboard Error",
         error
       );
+
+
     }
+
+
 
     setDashboardLoading(false);
+
+
+  }
+  // =============================
+// LOGIN CHILD / SERVANT
+// =============================
+
+
+async function login(){
+
+
+  setMessage("");
+
+
+  const cleanName =
+  name.trim();
+
+
+
+  if(!cleanName){
+
+    setMessage(
+      "اكتب اسمك الأول"
+    );
+
+    return;
+
   }
 
-  async function login() {
-    setMessage("");
 
-    const cleanName = name.trim();
 
-    if (!cleanName) {
-      setMessage("اكتب اسمك الأول");
-      return;
-    }
+  setLoading(true);
 
-    setLoading(true);
 
-    try {
-      // =========================
-      // البحث عن الطفل
-      // =========================
-      const {
-        data: children,
-        error: childError,
-      } = await supabase
-        .from("children")
-        .select("id, name, team_id, gender")
-        .ilike("name", cleanName);
 
-      if (childError) {
-        console.error(
-          "CHILD LOGIN ERROR:",
-          JSON.stringify(childError, null, 2)
+  try{
+
+
+    // البحث عن الطفل
+
+    const {
+      data:children
+    } = await supabase
+
+    .from("children")
+
+    .select(
+      "id,name,team_id,gender"
+    )
+
+    .ilike(
+      "name",
+      cleanName
+    );
+
+
+
+
+    if(children && children.length>0){
+
+
+      if(children.length>1){
+
+        setMessage(
+          "الاسم موجود لأكثر من بطل، اكتب الاسم بالكامل"
         );
 
-        setMessage("حصل خطأ أثناء تسجيل الدخول");
         return;
+
       }
 
-      // لو الطفل موجود
-      if (children && children.length > 0) {
-        if (children.length > 1) {
-          setMessage(
-            "الاسم ده موجود لأكتر من طالب، اكتب الاسم بالكامل"
-          );
-          return;
-        }
 
-        const child = children[0];
 
-        const user: LoggedUser = {
-          id: child.id,
-          name: child.name,
-          type: "child",
-          gender: child.gender,
-          team_id: child.team_id,
-        };
+      const child =
+      children[0];
 
-        localStorage.setItem(
-          "marathon_user",
-          JSON.stringify(user)
-        );
 
-        setLoggedUser(user);
 
-        // تحميل بيانات الطفل
-        loadChildDashboard(user);
+      const user:LoggedUser={
 
-        return;
-      }
+        id:child.id,
 
-      // =========================
-      // البحث عن الخادم / Admin
-      // =========================
-      const {
-        data: servants,
-        error: servantError,
-      } = await supabase
-        .from("servants")
-        .select("id, name, password, gender, role")
-        .ilike("name", cleanName);
+        name:child.name,
 
-      if (servantError) {
-        console.error(
-          "SERVANT LOGIN ERROR:",
-          JSON.stringify(servantError, null, 2)
-        );
+        type:"child",
 
-        setMessage("حصل خطأ أثناء تسجيل الدخول");
-        return;
-      }
+        gender:child.gender,
 
-      // لو خادم أو Admin موجود
-      if (servants && servants.length > 0) {
-        setNeedPassword(true);
-        setMessage("اكتب كلمة السر");
+        team_id:child.team_id
 
-        return;
-      }
-
-      // مش طفل ولا خادم
-      setMessage("الاسم ده مش مسجل في الماراثون");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loginServant() {
-    setMessage("");
-
-    const cleanName = name.trim();
-
-    if (!password) {
-      setMessage("اكتب كلمة السر");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const {
-        data: servants,
-        error,
-      } = await supabase
-        .from("servants")
-        .select("id, name, password, gender, role")
-        .ilike("name", cleanName);
-
-      if (error) {
-        console.error(
-          "SERVANT LOGIN ERROR:",
-          JSON.stringify(error, null, 2)
-        );
-
-        setMessage("حصل خطأ أثناء تسجيل الدخول");
-        return;
-      }
-
-      const servant = servants?.find(
-        (item) => item.password === password
-      );
-
-      if (!servant) {
-        setMessage("كلمة السر غلط");
-        return;
-      }
-
-      // =========================
-      // تحديد نوع الحساب
-      // =========================
-      const user: LoggedUser = {
-        id: servant.id,
-        name: servant.name,
-        type: "servant",
-        gender: servant.gender,
-        role: servant.role,
       };
+
+
 
       localStorage.setItem(
         "marathon_user",
         JSON.stringify(user)
       );
 
-      // =========================
-      // Admin
-      // =========================
-      if (servant.role === "admin") {
-        window.location.href = "/admin/dashboard";
-        return;
-      }
 
-      // =========================
-      // Servant
-      // =========================
-      window.location.href = "/servant/dashboard";
-    } finally {
-      setLoading(false);
+
+      setLoggedUser(user);
+
+
+
+      loadChildDashboard(user);
+
+
+
+      return;
+
+
     }
+
+
+
+
+
+    // البحث عن الخادم
+
+    const {
+      data:servants
+    } = await supabase
+
+    .from("servants")
+
+    .select(
+      "id,name,password,gender,role"
+    )
+
+    .ilike(
+      "name",
+      cleanName
+    );
+
+
+
+
+    if(servants && servants.length>0){
+
+
+      setNeedPassword(true);
+
+
+      setMessage(
+        "اكتب كلمة السر"
+      );
+
+
+      return;
+
+
+    }
+
+
+
+
+
+    setMessage(
+      "الاسم غير موجود في الماراثون"
+    );
+
+
+
+
+  }finally{
+
+
+    setLoading(false);
+
+
   }
 
-  function logout() {
-    localStorage.removeItem("marathon_user");
 
-    setLoggedUser(null);
-    setName("");
-    setPassword("");
-    setNeedPassword(false);
-    setMessage("");
+}
+
+
+
+
+
+
+// =============================
+// SERVANT LOGIN
+// =============================
+
+
+async function loginServant(){
+
+
+  setMessage("");
+
+
+
+  if(!password){
+
+
+    setMessage(
+      "اكتب كلمة السر"
+    );
+
+
+    return;
+
+
   }
 
-  // =========================
-  // التحية
-  // =========================
-  function getGreeting() {
-    if (!loggedUser) {
-      return "أهلاً يا بطل!";
+
+
+  setLoading(true);
+
+
+
+  try{
+
+
+    const {
+      data:servants
+    } = await supabase
+
+
+    .from("servants")
+
+
+    .select(
+      "id,name,password,gender,role"
+    )
+
+
+    .ilike(
+      "name",
+      name.trim()
+    );
+
+
+
+
+
+    const servant =
+    servants?.find(
+      item =>
+      item.password===password
+    );
+
+
+
+
+
+    if(!servant){
+
+
+      setMessage(
+        "كلمة السر غلط"
+      );
+
+
+      return;
+
+
     }
 
-    // =========================
-    // تحية الطفل
-    // =========================
-    if (loggedUser.type === "child") {
-      if (loggedUser.gender === "female") {
-        return `أهلاً يا بطلة (${loggedUser.name})`;
-      }
 
-      if (loggedUser.gender === "male") {
-        return `أهلاً يا بطل (${loggedUser.name})`;
-      }
 
-      return `أهلاً يا (${loggedUser.name})`;
+
+    const user:LoggedUser={
+
+
+      id:servant.id,
+
+
+      name:servant.name,
+
+
+      type:"servant",
+
+
+      gender:servant.gender,
+
+
+      role:servant.role
+
+
+    };
+
+
+
+
+
+    localStorage.setItem(
+
+      "marathon_user",
+
+      JSON.stringify(user)
+
+    );
+
+
+
+
+
+    if(servant.role==="admin"){
+
+
+      window.location.href =
+      "/admin/dashboard";
+
+
+    }else{
+
+
+      window.location.href =
+      "/servant/dashboard";
+
+
     }
 
-    // =========================
-    // تحية الخادم
-    // =========================
-    if (loggedUser.type === "servant") {
-      if (loggedUser.gender === "female") {
-        return `أهلاً يا تاسوني (${loggedUser.name})`;
-      }
 
-      if (loggedUser.gender === "male") {
-        return `أهلاً يا أستاذ (${loggedUser.name})`;
-      }
-    }
 
-    return `أهلاً يا (${loggedUser.name})`;
+
+  }finally{
+
+
+    setLoading(false);
+
+
   }
 
-function addQuestion() {
-  setQuestions([
-    ...questions,
-    {
-      question: "",
-      answers: ["", "", "", ""],
-      correctIndex: null,
-      points: 10,
-    },
-  ]);
+
 }
 
-function updateQuestion(
-  index: number,
-  field: keyof QuestionItem,
-  value: any
-) {
-  const newQuestions = [...questions];
 
-  newQuestions[index] = {
-    ...newQuestions[index],
-    [field]: value,
-  };
 
-  setQuestions(newQuestions);
-}
 
-function updateAnswer(
-  questionIndex: number,
-  answerIndex: number,
-  value: string
-) {
-  const newQuestions = [...questions];
 
-  newQuestions[questionIndex].answers[answerIndex] = value;
 
-  setQuestions(newQuestions);
-}
+// =============================
+// LOGOUT
+// =============================
 
-function deleteQuestion(index: number) {
-  setQuestions(
-    questions.filter((_, i) => i !== index)
+
+function logout(){
+
+
+  localStorage.removeItem(
+    "marathon_user"
   );
+
+
+  setLoggedUser(null);
+
+
+  setName("");
+
+  setPassword("");
+
+  setNeedPassword(false);
+
+  setMessage("");
+
+
 }
 
-  // =========================
-  // صفحة تسجيل الدخول
-  // =========================
-  if (!loggedUser) {
-    return (
-      <main
-        dir="rtl"
-        className="min-h-screen bg-slate-950 px-4 py-6 text-white sm:px-6"
-      >
-        <div className="mx-auto flex min-h-[90vh] w-full max-w-md items-center justify-center">
-          <div className="w-full rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-2xl sm:p-8">
 
-            <div className="mb-8 text-center">
-              <p className="mb-2 text-sm font-medium text-blue-400">
-                ماراثون الخدمة
-              </p>
 
-              <h1 className="text-3xl font-bold">
-                أهلاً يا بطل!
-              </h1>
 
-              <p className="mt-3 text-sm leading-6 text-slate-400">
-                اكتب اسمك عشان ندخلك على حسابك
-              </p>
-            </div>
 
-            <div className="space-y-4">
 
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">
-                  الاسم
-                </label>
 
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    setMessage("");
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !needPassword) {
-                      login();
-                    }
+// =============================
+// GREETING
+// =============================
 
-                    if (e.key === "Enter" && needPassword) {
-                      loginServant();
-                    }
-                  }}
-                  placeholder="اكتب اسمك"
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                />
-              </div>
 
-              {needPassword && (
-                <div>
-                  <label className="mb-2 block text-sm text-slate-300">
-                    كلمة السر
-                  </label>
+function getGreeting(){
 
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      setMessage("");
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        loginServant();
-                      }
-                    }}
-                    placeholder="اكتب كلمة السر"
-                    className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-white outline-none transition focus:border-blue-500"
-                  />
-                </div>
-              )}
 
-              <button
-                type="button"
-                onClick={
-                  needPassword
-                    ? loginServant
-                    : login
-                }
-                disabled={loading}
-                className="w-full rounded-xl bg-blue-600 py-3 font-bold transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading
-                  ? "جاري الدخول..."
-                  : "دخول"}
-              </button>
+  if(!loggedUser)
 
-              {message && (
-                <div className="rounded-xl border border-slate-700 bg-slate-950 p-4 text-center text-sm font-semibold text-slate-200">
-                  {message}
-                </div>
-              )}
+  return "أهلاً يا بطل!";
 
-            </div>
-          </div>
-        </div>
-      </main>
-    );
+
+
+
+
+  if(loggedUser.type==="child"){
+
+
+
+    if(loggedUser.gender==="female"){
+
+
+      return `👑 أهلاً يا بطلة ${loggedUser.name}`;
+
+
+    }
+
+
+
+    return `🔥 أهلاً يا بطل ${loggedUser.name}`;
+
+
   }
 
-  // =========================
-  // حساب الخادم
-  // =========================
-  if (loggedUser.type === "servant") {
-    return (
-      <main
-        dir="rtl"
-        className="min-h-screen bg-slate-950 px-4 py-6 text-white sm:px-6"
-      >
-        <div className="mx-auto w-full max-w-5xl">
 
-          <div className="mb-8 flex items-start justify-between gap-4">
-            <div>
-              <p className="mb-2 text-sm text-blue-400">
-                ماراثون الخدمة
-              </p>
 
-              <h1 className="text-2xl font-bold sm:text-3xl">
-                {getGreeting()}
-              </h1>
 
-              <p className="mt-2 text-sm text-slate-400">
-                حساب الخادم
-              </p>
-            </div>
 
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-bold text-slate-300 transition hover:bg-slate-800"
-            >
-              خروج
-            </button>
-          </div>
+  if(loggedUser.gender==="female"){
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="text-lg font-bold">
-                إضافة طفل
-              </h2>
+    return `أهلاً يا تاسوني ${loggedUser.name}`;
 
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                إضافة طفل جديد وتحديد فريقه ونوعه.
-              </p>
-            </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="text-lg font-bold">
-                إضافة فريق
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                إنشاء فريق جديد في الماراثون.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="text-lg font-bold">
-                الحضور
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                تسجيل حضور الأطفال ومتابعة الحضور.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="text-lg font-bold">
-                تعديل النقاط
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                إضافة أو خصم نقاط مع تسجيل السبب.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="text-lg font-bold">
-                الاعتراف
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                تسجيل اعتراف الأطفال وإضافة نقاط الفريق.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <h2 className="text-lg font-bold">
-                لوحة النتائج
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-400">
-                متابعة ترتيب الفرق وإجمالي النقاط.
-              </p>
-            </div>
-
-          </div>
-        </div>
-      </main>
-    );
   }
 
-  // =========================
-  // حساب الطفل
-  // =========================
-  return (
-    <main
-      dir="rtl"
-      className="min-h-screen bg-slate-950 px-4 py-5 text-white sm:px-6 sm:py-7"
-    >
-      <div className="mx-auto w-full max-w-5xl">
 
-        {/* Header */}
-        <div className="mb-6 flex items-start justify-between gap-4 sm:mb-8">
-          <div>
-            <p className="mb-1 text-sm font-medium text-blue-400">
-              ماراثون الخدمة
-            </p>
 
-            <h1 className="text-2xl font-bold sm:text-3xl">
-              {getGreeting()}
-            </h1>
 
-            <p className="mt-2 text-sm text-slate-400 sm:text-base">
-              رحلتك بدأت... جاهز للتحدي؟
-            </p>
-          </div>
+  return `أهلاً يا أستاذ ${loggedUser.name}`;
 
-          <button
-            type="button"
-            onClick={logout}
-            className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-2 text-sm font-bold text-slate-300 transition hover:bg-slate-800"
-          >
-            خروج
-          </button>
-        </div>
 
-        {/* Team */}
-        <div className="mb-5 overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 to-blue-900 p-5 shadow-xl sm:p-6">
-          <p className="text-sm text-blue-100">
-            فريقك
-          </p>
 
-          <div className="mt-2 flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h2 className="text-2xl font-bold sm:text-3xl">
-                {teamName}
-              </h2>
+}
 
-              <p className="mt-2 text-sm text-blue-100 sm:text-base">
-                مستعد للمنافسة؟
-              </p>
-            </div>
 
-            <div className="shrink-0 text-4xl sm:text-5xl">
-              🏆
-            </div>
-          </div>
-        </div>
 
-        {/* Stats */}
-        <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
-            <p className="text-xs text-slate-400 sm:text-sm">
-              ترتيب الفريق
-            </p>
 
-            <p className="mt-2 text-2xl font-bold sm:text-3xl">
-              {dashboardLoading
-                ? "..."
-                : teamRank > 0
-                ? `#${teamRank}`
-                : "-"}
-            </p>
-          </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
-            <p className="text-xs text-slate-400 sm:text-sm">
-              حضورك
-            </p>
 
-            <p className="mt-2 text-2xl font-bold sm:text-3xl">
-              {dashboardLoading
-                ? "..."
-                : `${attendancePercentage}%`}
-            </p>
+// =============================
+// LOGIN PAGE
+// =============================
 
-            <p className="mt-1 text-xs text-slate-500">
-              {attendanceCount} حضور
-            </p>
-          </div>
 
-          <div className="col-span-2 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:col-span-1 sm:p-5">
-            <p className="text-xs text-slate-400 sm:text-sm">
-              نقاط الفريق
-            </p>
+if(!loggedUser){
 
-            <p className="mt-2 text-2xl font-bold text-blue-400 sm:text-3xl">
-              {dashboardLoading
-                ? "..."
-                : teamPoints}
-            </p>
-          </div>
 
-        </div>
+return(
 
-        {/* Progress */}
-        <div className="mb-5 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
-          <div className="mb-3 flex items-center justify-between gap-3">
+<main
 
-            <div>
-              <p className="text-xs text-slate-400 sm:text-sm">
-                تقدمك
-              </p>
+dir="rtl"
 
-              <h2 className="mt-1 text-lg font-bold sm:text-xl">
-                الأسبوع الأول
-              </h2>
-            </div>
+className="
+min-h-screen
+bg-black
+text-white
+flex
+items-center
+justify-center
+p-5
+relative
+overflow-hidden
+"
 
-            <span className="shrink-0 text-sm font-bold text-blue-400 sm:text-base">
-              {attendancePercentage}/100
-            </span>
 
-          </div>
+>
 
-          <div className="h-2.5 overflow-hidden rounded-full bg-slate-800 sm:h-3">
-            <div
-              className="h-full rounded-full bg-blue-500 transition-all duration-500"
-              style={{
-                width: `${attendancePercentage}%`,
-              }}
-            />
-          </div>
-        </div>
 
-        {/* Weekly Lesson */}
-<div className="mb-5 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
+<div
 
-  <p className="mb-2 text-sm text-blue-400">
-    درس الأسبوع
-  </p>
+className="
+absolute
+inset-0
+bg-gradient-to-br
+from-blue-950
+via-black
+to-purple-950
+"
 
-  <h2 className="text-lg font-bold sm:text-xl">
-    درس الأسبوع الحالي
-  </h2>
+/>
 
-  <p className="mt-2 text-sm leading-6 text-slate-400 sm:text-base">
-    ادخل وشاهد شرح الدرس واحصل على نقاط فريقك.
-  </p>
 
-  <button
-    type="button"
-    onClick={() => {
-      window.location.href = "/child-weekly-lesson";
-    }}
-    className="mt-4 w-full rounded-xl bg-blue-600 py-3 font-bold transition hover:bg-blue-500"
-  >
-    دخول الدرس 📖
-  </button>
 
+<div
+
+className="
+relative
+w-full
+max-w-md
+rounded-[40px]
+border
+border-blue-500/30
+bg-slate-900/90
+p-8
+shadow-2xl
+"
+
+
+>
+
+
+
+<div
+className="
+text-center
+mb-8
+"
+>
+
+
+<div
+className="
+text-7xl
+"
+>
+🏆
 </div>
 
-{/* Bible Reading */}
 
-<div className="mb-5 rounded-2xl border border-slate-800 bg-slate-900 p-4 sm:p-5">
 
-  <p className="mb-2 text-sm text-green-400">
-    قراءة الكتاب المقدس
-  </p>
+<h1
+className="
+text-4xl
+font-black
+mt-4
+"
+>
+ماراثون الخدمة
+</h1>
 
-  <h2 className="text-lg font-bold sm:text-xl">
-    قراءة اليوم 📖
-  </h2>
 
-  <p className="mt-2 text-sm leading-6 text-slate-400 sm:text-base">
-    اقرأ الإصحاح المحدد وجاوب على سؤال اليوم لتحصل على نقطتين لفريقك.
-  </p>
 
-  <button
-    type="button"
-    onClick={() => {
-      window.location.href = "/child-bible";
-    }}
-    className="mt-4 w-full rounded-xl bg-green-600 py-3 font-bold transition hover:bg-green-500"
-  >
-    دخول قراءة الكتاب المقدس ✝️
-  </button>
+<p
+className="
+text-blue-400
+mt-3
+"
+>
+جاهز تدخل المنافسة؟ 🔥
+</p>
+
 
 </div>
 
 
-      </div>
-    </main>
-  );
+
+
+
+<input
+
+value={name}
+
+onChange={
+e=>{
+setName(e.target.value);
+setMessage("");
+}
+}
+
+onKeyDown={
+e=>{
+
+if(e.key==="Enter" && !needPassword)
+
+login();
+
+
+if(e.key==="Enter" && needPassword)
+
+loginServant();
+
+
+}
+
+}
+
+placeholder="اكتب اسمك"
+
+className="
+w-full
+rounded-2xl
+bg-black
+border
+border-slate-700
+px-5
+py-4
+outline-none
+focus:border-blue-500
+"
+
+/>
+
+
+
+
+
+{needPassword &&
+
+<input
+
+type="password"
+
+value={password}
+
+onChange={
+e=>{
+setPassword(e.target.value);
+setMessage("");
+}
+}
+
+placeholder="كلمة السر"
+
+className="
+mt-4
+w-full
+rounded-2xl
+bg-black
+border
+border-slate-700
+px-5
+py-4
+outline-none
+focus:border-blue-500
+"
+
+/>
+
+}
+
+
+
+
+
+
+<button
+
+onClick={
+needPassword
+?
+loginServant
+:
+login
+}
+
+disabled={loading}
+
+className="
+mt-5
+w-full
+rounded-2xl
+bg-gradient-to-r
+from-blue-600
+to-purple-600
+py-4
+font-black
+text-lg
+"
+
+
+>
+
+{
+
+loading
+
+?
+
+"دخول..."
+
+:
+
+"🚀 دخول الماراثون"
+
+}
+
+
+</button>
+
+
+
+
+
+{
+message &&
+
+<div
+
+className="
+mt-5
+rounded-xl
+bg-black
+border
+border-slate-700
+p-4
+text-center
+"
+
+>
+
+{message}
+
+</div>
+
+}
+
+
+
+</div>
+
+
+</main>
+
+
+);
+
+
+}
+// =============================
+// SERVANT MOBILE MENU
+// =============================
+
+
+if(loggedUser.type==="servant"){
+
+
+const menuItems=[
+
+
+{
+title:"إضافة طفل",
+desc:"إضافة طفل جديد وتحديد الفريق",
+icon:"👦",
+link:"/servant/add-child"
+},
+
+
+{
+title:"إضافة فريق",
+desc:"إنشاء فريق جديد في الماراثون",
+icon:"🏆",
+link:"/servant/add-team"
+},
+
+
+{
+title:"الحضور",
+desc:"تسجيل حضور الأطفال",
+icon:"✅",
+link:"/servant/attendance"
+},
+
+
+{
+title:"القداس",
+desc:"متابعة حضور القداسات",
+icon:"⛪",
+link:"/servant/mass"
+},
+
+
+{
+title:"الاعتراف",
+desc:"تسجيل اعترافات الأطفال",
+icon:"✝️",
+link:"/servant/confession"
+},
+
+
+{
+title:"تسميع المزمور",
+desc:"متابعة التسميع وإضافة النقاط",
+icon:"📖",
+link:"/servant/psalm"
+},
+
+
+{
+title:"النقاط",
+desc:"إضافة وخصم نقاط الفرق",
+icon:"⭐",
+link:"/servant/points"
+},
+
+
+{
+title:"الترتيب",
+desc:"مشاهدة ترتيب الفرق",
+icon:"🔥",
+link:"/servant/ranking"
+}
+
+
+];
+
+
+
+
+return(
+
+<main
+
+dir="rtl"
+
+className="
+min-h-screen
+bg-black
+text-white
+px-4
+py-6
+"
+
+
+>
+
+
+<div
+
+className="
+mx-auto
+max-w-xl
+"
+
+>
+
+
+<div
+
+className="
+flex
+justify-between
+items-start
+mb-8
+"
+
+>
+
+
+<div>
+
+<p
+className="
+text-blue-400
+font-bold
+"
+>
+🏃 ماراثون الخدمة
+</p>
+
+
+
+<h1
+
+className="
+text-3xl
+font-black
+mt-2
+"
+
+>
+
+{getGreeting()}
+
+</h1>
+
+
+
+<p
+
+className="
+text-slate-400
+mt-2
+"
+
+>
+
+لوحة تحكم الخادم
+
+</p>
+
+
+</div>
+
+
+
+
+<button
+
+onClick={logout}
+
+className="
+rounded-2xl
+bg-red-900/40
+border
+border-red-700
+px-4
+py-3
+font-bold
+"
+
+>
+
+خروج
+
+</button>
+
+
+</div>
+
+
+
+
+
+
+<div
+
+className="
+space-y-4
+"
+
+>
+
+
+{
+
+menuItems.map(item=>(
+
+
+<button
+
+
+key={item.title}
+
+
+onClick={()=>{
+
+window.location.href=item.link;
+
+}}
+
+
+className="
+w-full
+rounded-3xl
+bg-slate-900
+border
+border-slate-800
+p-5
+flex
+items-center
+gap-4
+text-right
+active:scale-95
+transition
+"
+
+>
+
+
+<div
+className="
+text-5xl
+"
+>
+
+{item.icon}
+
+</div>
+
+
+
+<div
+className="
+flex-1
+"
+>
+
+<h2
+className="
+text-xl
+font-black
+"
+>
+
+{item.title}
+
+</h2>
+
+
+<p
+className="
+text-sm
+text-slate-400
+mt-1
+"
+>
+
+{item.desc}
+
+</p>
+
+
+</div>
+
+
+
+<div
+className="
+text-blue-400
+text-2xl
+"
+>
+
+←
+
+</div>
+
+
+</button>
+
+
+))
+
+
+}
+
+
+</div>
+
+
+
+</div>
+
+
+</main>
+
+
+);
+
+
+}
+
+
+
+
+
+
+
+
+// =============================
+// CHILD DASHBOARD
+// =============================
+
+
+return(
+
+<main
+
+dir="rtl"
+
+className="
+min-h-screen
+bg-black
+text-white
+px-4
+py-6
+"
+
+>
+
+
+<div
+
+className="
+mx-auto
+max-w-5xl
+"
+
+>
+
+
+
+<div
+
+className="
+flex
+justify-between
+items-start
+mb-8
+"
+
+>
+
+
+<div>
+
+
+<p
+
+className="
+text-blue-400
+font-bold
+"
+
+>
+
+🏃 ماراثون الخدمة
+
+</p>
+
+
+
+<h1
+
+className="
+text-3xl
+font-black
+mt-2
+"
+
+>
+
+{getGreeting()}
+
+</h1>
+
+
+
+<p
+
+className="
+text-slate-400
+mt-2
+"
+
+>
+
+معركتك بدأت... أثبت إن فريقك الأقوى 🔥
+
+</p>
+
+
+</div>
+
+
+
+<button
+
+onClick={logout}
+
+className="
+bg-slate-900
+border
+border-slate-700
+px-5
+py-3
+rounded-2xl
+font-bold
+"
+
+>
+
+خروج
+
+</button>
+
+
+</div>
+
+
+
+
+
+
+
+<div
+
+className="
+rounded-[35px]
+bg-gradient-to-br
+from-blue-700
+via-purple-700
+to-black
+p-7
+shadow-2xl
+mb-6
+"
+
+>
+
+
+<p
+className="
+text-blue-100
+"
+>
+
+فريقك الحالي
+
+</p>
+
+
+
+<h2
+
+className="
+text-4xl
+font-black
+mt-3
+"
+
+>
+
+{teamName}
+
+</h2>
+
+
+
+<div
+
+className="
+mt-5
+flex
+justify-between
+items-center
+"
+
+>
+
+
+<div>
+
+<p
+className="
+text-sm
+text-blue-200
+"
+>
+
+ترتيب الفريق
+
+</p>
+
+
+
+<p
+
+className="
+text-5xl
+font-black
+"
+
+>
+
+#
+
+{dashboardLoading
+?
+"?"
+:
+teamRank}
+
+</p>
+
+
+</div>
+
+
+
+<div
+
+className="
+text-7xl
+"
+
+>
+
+🏆
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<div
+
+className="
+grid
+grid-cols-2
+gap-4
+mb-7
+"
+
+>
+
+
+<div
+
+className="
+rounded-3xl
+bg-slate-900
+border
+border-slate-800
+p-5
+"
+
+>
+
+
+<p
+className="
+text-slate-400
+"
+>
+
+نقاط الفريق
+
+</p>
+
+
+<h3
+
+className="
+text-4xl
+font-black
+text-blue-400
+mt-2
+"
+
+>
+
+{
+dashboardLoading
+?
+"..."
+:
+teamPoints
+}
+
+</h3>
+
+
+</div>
+
+
+
+
+<div
+
+className="
+rounded-3xl
+bg-gradient-to-br
+from-yellow-600
+to-orange-800
+p-5
+"
+
+>
+
+
+<p>
+
+المركز الحالي
+
+</p>
+
+
+<h3
+
+className="
+text-3xl
+font-black
+mt-2
+"
+
+>
+
+{
+
+teamRank===1
+
+?
+
+"🥇 الأول"
+
+:
+
+teamRank===2
+
+?
+
+"🥈 الثاني"
+
+:
+
+teamRank===3
+
+?
+
+"🥉 الثالث"
+
+:
+
+`#${teamRank}`
+
+}
+
+</h3>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+<div
+
+className="
+rounded-[35px]
+bg-slate-900
+border
+border-slate-800
+p-6
+mb-7
+"
+
+>
+
+
+<h2
+
+className="
+text-2xl
+font-black
+mb-5
+"
+
+>
+
+🔥 ترتيب المعركة
+
+</h2>
+
+
+
+<div
+
+className="
+space-y-4
+"
+
+>
+
+
+{
+
+ranking.slice(0,3).map(team=>(
+
+
+<div
+
+key={team.teamId}
+
+className="
+rounded-2xl
+bg-slate-800
+p-4
+flex
+justify-between
+items-center
+"
+
+>
+
+
+<div
+className="
+font-black
+"
+
+>
+
+{team.rank===1
+?
+"🥇"
+:
+team.rank===2
+?
+"🥈"
+:
+"🥉"}
+
+{" "}
+
+{team.name}
+
+</div>
+
+
+
+<div
+className="
+font-bold
+"
+
+>
+
+{team.points} نقطة
+
+</div>
+
+
+</div>
+
+
+))
+
+
+}
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+
+<div
+
+className="
+rounded-[35px]
+bg-gradient-to-br
+from-slate-900
+to-blue-950
+border
+border-blue-800
+p-6
+"
+
+>
+
+
+<div
+className="
+text-5xl
+"
+>
+
+📖🔥
+
+</div>
+
+
+
+<h2
+
+className="
+text-2xl
+font-black
+mt-4
+"
+
+>
+
+درس الأسبوع
+
+</h2>
+
+
+
+<p
+
+className="
+text-slate-400
+mt-3
+"
+
+>
+
+راجع الدرس واحفظ الآية وخلي فريقك يكسب نقاط
+
+</p>
+
+
+
+
+<button
+
+onClick={()=>{
+
+window.location.href="/child-weekly-lesson";
+
+}}
+
+className="
+mt-5
+w-full
+rounded-2xl
+bg-blue-600
+py-4
+font-black
+"
+
+>
+
+🚀 دخول الدرس
+
+</button>
+
+
+</div>
+
+
+
+
+
+</div>
+
+
+</main>
+
+
+);
+
+
 }
