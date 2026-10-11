@@ -363,70 +363,7 @@ export default function AddChild() {
 
 
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4 space-y-3">
-
-
-            <h2 className="font-bold text-lg">
-              👨‍👩‍👦 بيانات الأسرة
-            </h2>
-
-
-
-            <input
-              value={fatherName}
-              onChange={(e)=>setFatherName(e.target.value)}
-              placeholder="اسم الأب"
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
-            />
-
-
-
-            <input
-              value={fatherPhone}
-              onChange={(e)=>setFatherPhone(e.target.value)}
-              placeholder="رقم الأب"
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
-            />
-
-
-
-            <input
-              value={motherName}
-              onChange={(e)=>setMotherName(e.target.value)}
-              placeholder="اسم الأم"
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
-            />
-
-
-
-            <input
-              value={motherPhone}
-              onChange={(e)=>setMotherPhone(e.target.value)}
-              placeholder="رقم الأم"
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
-            />
-
-
-
-            <input
-              value={address}
-              onChange={(e)=>setAddress(e.target.value)}
-              placeholder="العنوان"
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
-            />
-
-
-
-            <input
-              value={childPhone}
-              onChange={(e)=>setChildPhone(e.target.value)}
-              placeholder="رقم الطفل (اختياري)"
-              className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3"
-            />
-
-
-          </div>
-
+          
 
 
 
