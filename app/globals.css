@@ -1,9 +1,12 @@
 @import "tailwindcss";
+@plugin "tailwindcss-animate";
+
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050816;
+  --foreground: #ffffff;
 }
+
 
 @theme inline {
   --color-background: var(--background);
@@ -12,22 +15,53 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
 html,
 body {
   width: 100%;
   min-height: 100%;
   margin: 0;
   padding: 0;
+  background: #050816;
+  color: white;
+}
+
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+}
+
+
+/* إزالة أي تأثيرات غريبة */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+button,
+div {
+  transition-property: transform, opacity, box-shadow;
+  transition-duration: 200ms;
+}
+
+
+@keyframes pageEnter {
+
+from {
+opacity:0;
+transform:translateY(25px);
+}
+
+to {
+opacity:1;
+transform:translateY(0);
+}
+
+}
+
+
+.page-enter {
+animation: pageEnter .5s ease-out;
 }

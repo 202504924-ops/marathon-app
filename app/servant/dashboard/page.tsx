@@ -594,12 +594,12 @@ return(
 dir="rtl"
 
 className="
+relative
 min-h-screen
 bg-[#020617]
 text-white
 overflow-hidden
 "
-
 
 >
 
@@ -611,13 +611,15 @@ overflow-hidden
 
 className="
 absolute
-inset-0
+top-0
+left-0
+right-0
+h-[500px]
 pointer-events-none
-bg-linear-to-br
-from-blue-950
+bg-gradient-to-b
+from-blue-950/70
 via-[#020617]
-to-blue-900
-opacity-90
+to-transparent
 "
 
 />
@@ -648,7 +650,7 @@ py-8
 
 className="
 rounded-[35px]
-bg-blue-950/40
+bg-slate-900/70
 border
 border-blue-900/50
 p-6
@@ -1079,7 +1081,7 @@ onClick={()=>goTo("/weekly-lesson")}
 
 className="
 rounded-[35px]
-bg-blue-950/40
+bg-slate-900/70
 border
 border-blue-900/50
 p-6
@@ -1202,65 +1204,42 @@ filteredTeams.map(
 
 
 <div
+  key={team.id}
+  onClick={(e)=>{
+  const card = e.currentTarget;
 
+  card.classList.add("scale-90");
 
-key={team.id}
+  setTimeout(()=>{
+    goTo(`/servant/team/${team.id}`);
+  },150);
+}}
+  className={`
+    cursor-pointer
+    flex
+    items-center
+    justify-between
+    rounded-3xl
+    p-4
+    border
+   transition-all
+duration-150
+hover:scale-[1.03]
+hover:-translate-y-1
+hover:shadow-2xl
+active:scale-90
+active:translate-y-1
 
-
-className={`
-
-flex
-
-items-center
-
-justify-between
-
-rounded-3xl
-
-p-5
-
-border
-
-transition
-
-hover:scale-[1.02]
-
-
-
-${
-
-index===0
-
-?
-
-"bg-yellow-500/10 border-yellow-400"
-
-:
-
-index===1
-
-?
-
-"bg-slate-700/40 border-slate-500"
-
-:
-
-index===2
-
-?
-
-"bg-orange-500/10 border-orange-500"
-
-:
-
-"bg-black/30 border-blue-900"
-
-}
-
-
-`}
-
-
+    ${
+      index === 0
+        ? "bg-yellow-600/20 border-yellow-500"
+        : index === 1
+        ? "bg-slate-700/40 border-slate-500"
+        : index === 2
+        ? "bg-orange-700/20 border-orange-500"
+        : "bg-black border-slate-800"
+    }
+  `}
 >
 
 
@@ -1546,7 +1525,7 @@ rounded-3xl
 
 p-5
 
-bg-blue-950/40
+bg-slate-900/70
 
 border
 
@@ -1679,7 +1658,7 @@ p-5
 
 text-right
 
-bg-blue-950/40
+bg-slate-900/70
 
 border
 
