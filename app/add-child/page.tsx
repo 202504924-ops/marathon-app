@@ -26,6 +26,7 @@ export default function AddChild(){
 const [teams,setTeams] = useState<Team[]>([]);
 
 const [children,setChildren] = useState<Child[]>([]);
+const [search,setSearch] = useState("");
 
 
 const [name,setName] = useState("");
@@ -316,7 +317,14 @@ const addedTeam =
 teams.find(
 t=>t.id===addedChild?.team_id
 );
+
+const filteredChildren = children.filter(child =>
+  child.name.toLowerCase().includes(search.toLowerCase())
+);
+
 return (
+  
+
 
 <main
 dir="rtl"
@@ -328,6 +336,7 @@ px-4
 py-6
 "
 >
+
 
 <div className="max-w-xl mx-auto">
 
@@ -684,14 +693,35 @@ mb-5
 👥 قائمة الأطفال
 </h2>
 
+<input
 
+value={search}
+
+onChange={(e)=>setSearch(e.target.value)}
+
+placeholder="🔍 ابحث عن طفل لتعديل بياناته..."
+
+className="
+w-full
+mb-5
+rounded-xl
+bg-slate-950
+border
+border-slate-700
+px-4
+py-3
+outline-none
+focus:border-blue-500
+"
+
+/>
 
 <div className="space-y-4">
 
 
 {
 
-children.map(child=>{
+filteredChildren.map(child=>{
 
 
 const team =
