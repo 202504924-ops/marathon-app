@@ -15,53 +15,77 @@ type LoggedUser = {
 };
 
 type Team = {
-  id:number;
-  name:string;
+  id: number;
+  name: string;
+  image_url: string | null;
 };
 
 type TeamPoint = {
-  team_id:number;
-  points:number;
+  team_id: number;
+  points: number;
 };
 
 type RankingTeam = {
-  teamId:number;
-  name:string;
-  points:number;
-  rank:number;
+  teamId: number;
+  name: string;
+  points: number;
+  rank: number;
+  image_url: string | null;
 };
 
+type Lesson = {
+  id:number;
+  title:string;
+  story:string;
+  verse:string;
+  reference:string | null;
+};
 
-export default function Home(){
+export default function Home() {
 
-const [name,setName]=useState("");
-const [password,setPassword]=useState("");
+const [name,setName] = useState("");
+const [password,setPassword] = useState("");
 
-const [needPassword,setNeedPassword]=useState(false);
-const [loading,setLoading]=useState(false);
-const [message,setMessage]=useState("");
+const [needPassword,setNeedPassword] = useState(false);
+const [loading,setLoading] = useState(false);
+const [message,setMessage] = useState("");
 
-const [loggedUser,setLoggedUser]=useState<LoggedUser|null>(null);
+const [loggedUser,setLoggedUser] =
+useState<LoggedUser|null>(null);
 
 
-const [teamName,setTeamName]=useState("...");
-const [teamPoints,setTeamPoints]=useState(0);
-const [teamRank,setTeamRank]=useState(0);
+const [teamName,setTeamName] = useState("...");
+const [teamPoints,setTeamPoints] = useState(0);
+const [teamRank,setTeamRank] = useState(0);
 
-const [ranking,setRanking]=useState<RankingTeam[]>([]);
-const [dashboardLoading,setDashboardLoading]=useState(false);
+const [ranking,setRanking] =
+useState<RankingTeam[]>([]);
+
+const [dashboardLoading,setDashboardLoading] =
+useState(false);
+
+
+const [lesson,setLesson] =
+useState<Lesson|null>(null);
+
+const [showVerse,setShowVerse] =
+useState(false);
+
+const [lessonLoading,setLessonLoading] =
+useState(false);
 
 
 
 useEffect(()=>{
 
-const saved=localStorage.getItem("marathon_user");
+const saved =
+localStorage.getItem("marathon_user");
 
 if(!saved)return;
 
 try{
 
-const user=JSON.parse(saved);
+const user = JSON.parse(saved);
 
 setLoggedUser(user);
 
@@ -93,13 +117,55 @@ localStorage.removeItem("marathon_user");
 
 
 
+async function loadLesson(){
+
+setLessonLoading(true);
+
+try{
+
+const {data,error}=await supabase
+.from("weekly_lessons")
+.select("*")
+.eq("is_active",true)
+.order("created_at",{ascending:false})
+.limit(1)
+.maybeSingle();
+
+
+console.log("LESSON DATA:", data);
+console.log("LESSON ERROR:", error);
+
+
+if(data){
+setLesson(data);
+}else{
+setLesson(null);
+}
+
+
+}catch(error){
+
+console.log("LESSON ERROR:", error);
+
+}
+
+finally{
+
+setLessonLoading(false);
+
+}
+
+}
+
 
 
 async function loadChildDashboard(user:LoggedUser){
 
 if(!user.team_id)return;
 
+
 setDashboardLoading(true);
+
 
 try{
 
@@ -125,7 +191,8 @@ const {data:points}=await supabase
 
 const {data:teams}=await supabase
 .from("teams")
-.select("id,name");
+.select("id,name,image_url");
+console.log(teams);
 
 
 
@@ -146,6 +213,7 @@ const rankingData:RankingTeam[]=(teams||[])
 
 teamId:team.id,
 name:team.name,
+image_url:team.image_url,
 points:pointMap[team.id]||0,
 rank:0
 
@@ -154,17 +222,19 @@ rank:0
 
 
 
-rankingData.forEach((team,index)=>{
-team.rank=index+1;
-});
+rankingData.forEach((item,index)=>{
 
+item.rank=index+1;
+
+});
 
 
 setRanking(rankingData);
 
 
 
-const current=rankingData.find(
+const current =
+rankingData.find(
 item=>item.teamId===user.team_id
 );
 
@@ -179,18 +249,17 @@ setTeamRank(current.rank);
 
 }catch(error){
 
-console.log(
-"Dashboard Error",
-error
-);
+console.log(error);
 
 }
+
+
+await loadLesson();
 
 
 setDashboardLoading(false);
 
 }
-
 
 
 
@@ -203,22 +272,24 @@ return "أهلاً يا بطل!";
 
 if(loggedUser.type==="child"){
 
-if(loggedUser.gender==="female")
-return `👑 أهلاً يا بطلة ${loggedUser.name}`;
+return loggedUser.gender==="female"
+?
+`👑 أهلاً يا بطلة ${loggedUser.name}`
+:
+`🔥 أهلاً يا بطل ${loggedUser.name}`;
+
+}
 
 
-return `🔥 أهلاً يا بطل ${loggedUser.name}`;
+return loggedUser.gender==="female"
+?
+`أهلاً يا تاسوني ${loggedUser.name}`
+:
+`أهلاً يا أستاذ ${loggedUser.name}`;
 
 }
 
 
-if(loggedUser.gender==="female")
-return `أهلاً يا تاسوني ${loggedUser.name}`;
-
-
-return `أهلاً يا أستاذ ${loggedUser.name}`;
-
-}
 
 
 async function login(){
@@ -249,19 +320,7 @@ const {data:children}=await supabase
 
 
 
-if(children && children.length>0){
-
-
-if(children.length>1){
-
-setMessage(
-"الاسم موجود لأكثر من بطل، اكتب الاسم بالكامل"
-);
-
-return;
-
-}
-
+if(children && children.length){
 
 
 const child=children[0];
@@ -278,7 +337,6 @@ team_id:child.team_id
 };
 
 
-
 localStorage.setItem(
 "marathon_user",
 JSON.stringify(user)
@@ -287,14 +345,11 @@ JSON.stringify(user)
 
 setLoggedUser(user);
 
-
 loadChildDashboard(user);
-
 
 return;
 
 }
-
 
 
 
@@ -306,10 +361,9 @@ const {data:servants}=await supabase
 
 
 
-if(servants && servants.length>0){
+if(servants && servants.length){
 
 setNeedPassword(true);
-
 setMessage("اكتب كلمة السر");
 
 return;
@@ -318,10 +372,7 @@ return;
 
 
 
-setMessage(
-"الاسم غير موجود في الماراثون"
-);
-
+setMessage("الاسم غير موجود في الماراثون");
 
 
 }finally{
@@ -332,27 +383,16 @@ setLoading(false);
 
 }
 
-
-
-
-
-
-
 async function loginServant(){
 
-
 setMessage("");
-
-
 
 if(!password){
 
 setMessage("اكتب كلمة السر");
-
 return;
 
 }
-
 
 
 setLoading(true);
@@ -368,7 +408,8 @@ const {data:servants}=await supabase
 
 
 
-const servant=servants?.find(
+const servant =
+servants?.find(
 item=>item.password===password
 );
 
@@ -377,7 +418,6 @@ item=>item.password===password
 if(!servant){
 
 setMessage("كلمة السر غلط");
-
 return;
 
 }
@@ -393,7 +433,6 @@ gender:servant.gender,
 role:servant.role
 
 };
-
 
 
 localStorage.setItem(
@@ -414,7 +453,6 @@ window.location.href="/servant/dashboard";
 }
 
 
-
 }finally{
 
 setLoading(false);
@@ -426,9 +464,6 @@ setLoading(false);
 
 
 
-
-
-
 function logout(){
 
 localStorage.removeItem(
@@ -436,13 +471,9 @@ localStorage.removeItem(
 );
 
 setLoggedUser(null);
-
 setName("");
-
 setPassword("");
-
 setNeedPassword(false);
-
 setMessage("");
 
 }
@@ -451,21 +482,13 @@ setMessage("");
 
 
 
-
-// =============================
-// LOGIN PAGE
-// =============================
-
-
 if(!loggedUser){
 
 
 return(
 
 <main
-
 dir="rtl"
-
 className="
 min-h-screen
 bg-[#050816]
@@ -474,84 +497,46 @@ flex
 items-center
 justify-center
 p-5
-relative
-overflow-hidden
 "
-
-
 >
 
 
 <div
-
 className="
-absolute
-inset-0
-bg-[#050816]
-"
-
-/>
-
-
-
-<div
-
-className="
-relative
 w-full
 max-w-md
 rounded-[40px]
+bg-slate-900
 border
 border-blue-500/30
-bg-slate-900
 p-8
 shadow-2xl
 "
-
-
 >
 
 
-<div
-className="
-text-center
-mb-8
-"
->
+<div className="text-center mb-8">
 
-
-<div
-className="
-text-7xl
-"
->
-
+<div className="text-7xl">
 🏆
-
 </div>
 
 
-
-<h1
-className="
+<h1 className="
 text-4xl
 font-black
 mt-4
-"
->
+">
 
 ماراثون الخدمة
 
 </h1>
 
 
-
-<p
-className="
+<p className="
 text-blue-400
 mt-3
-"
->
+">
 
 جاهز تدخل المنافسة؟ 🔥
 
@@ -559,7 +544,6 @@ mt-3
 
 
 </div>
-
 
 
 
@@ -585,12 +569,8 @@ border
 border-slate-700
 px-5
 py-4
-outline-none
-focus:border-blue-500
 "
-
 />
-
 
 
 
@@ -621,15 +601,11 @@ border
 border-slate-700
 px-5
 py-4
-outline-none
-focus:border-blue-500
 "
 
 />
 
 }
-
-
 
 
 
@@ -650,31 +626,23 @@ className="
 mt-5
 w-full
 rounded-2xl
-bg-gradient-to-r
-from-blue-600
-to-blue-800
+bg-blue-700
 py-4
 font-black
 text-lg
 "
 
-
 >
 
 {
-
 loading
 ?
 "دخول..."
 :
 "🚀 دخول الماراثون"
-
 }
 
-
 </button>
-
-
 
 
 
@@ -682,17 +650,15 @@ loading
 message &&
 
 <div
-
 className="
 mt-5
-rounded-xl
 bg-black
 border
 border-slate-700
+rounded-xl
 p-4
 text-center
 "
-
 >
 
 {message}
@@ -702,37 +668,33 @@ text-center
 }
 
 
-
 </div>
 
 
 </main>
 
-
 );
 
-
 }
-// =============================
-// SERVANT DASHBOARD
-// =============================
+
+
+
 
 
 if(loggedUser.type==="servant"){
-
 
 const menuItems=[
 
 {
 title:"إضافة طفل",
-desc:"إضافة طفل جديد وتحديد الفريق",
+desc:"إضافة طفل جديد للمسابقة",
 icon:"👦",
 link:"/servant/add-child"
 },
 
 {
 title:"إضافة فريق",
-desc:"إنشاء فريق جديد في الماراثون",
+desc:"إنشاء وإدارة الفرق",
 icon:"🏆",
 link:"/servant/add-team"
 },
@@ -753,111 +715,110 @@ link:"/servant/mass"
 
 {
 title:"الاعتراف",
-desc:"تسجيل اعترافات الأطفال",
+desc:"تسجيل الاعترافات",
 icon:"✝️",
 link:"/servant/confession"
 },
 
 {
-title:"تسميع المزمور",
-desc:"متابعة التسميع وإضافة النقاط",
+title:"المزمور",
+desc:"تسجيل التسميع والنقاط",
 icon:"📖",
 link:"/servant/psalm"
 },
 
 {
 title:"النقاط",
-desc:"إضافة وخصم نقاط الفرق",
+desc:"إضافة نقاط الفرق",
 icon:"⭐",
 link:"/servant/points"
-},
-
-{
-title:"الترتيب",
-desc:"مشاهدة ترتيب الفرق",
-icon:"🔥",
-link:"/servant/ranking"
 }
 
 ];
 
 
-
 return(
 
 <main
-
 dir="rtl"
-
 className="
 min-h-screen
 bg-[#050816]
 text-white
 px-4
 py-6
-overflow-hidden
-"
-
->
-
-
-
-
-
-<div
-className="
-max-w-xl
-mx-auto
-relative
-z-10
 "
 >
 
+<div className="max-w-5xl mx-auto">
+
+
+{/* TOP */}
 
 <div
 className="
+rounded-[40px]
+bg-gradient-to-br
+from-blue-900
+via-slate-900
+to-black
+border
+border-blue-500/30
+p-8
+mb-8
+shadow-2xl
+"
+>
+
+<div className="
 flex
 justify-between
-items-start
-mb-8
+items-center
 "
 >
 
 
 <div>
 
-
-<p className="text-blue-400 font-bold">
-
+<p className="
+text-blue-300
+font-bold
+"
+>
 🏃 ماراثون الخدمة
-
 </p>
 
 
-
-<h1
-className="
-text-3xl
+<h1 className="
+text-4xl
 font-black
-mt-2
+mt-3
 "
 >
-
 {getGreeting()}
-
 </h1>
 
 
-
-<p className="text-slate-400 mt-2">
-
-لوحة تحكم الخادم
-
+<p className="
+text-slate-300
+mt-3
+"
+>
+لوحة تحكم الخادم 👨‍🏫
 </p>
 
 
 </div>
 
+
+<div className="
+text-7xl
+">
+👨‍🏫
+</div>
+
+
+</div>
 
 
 <button
@@ -865,19 +826,18 @@ mt-2
 onClick={logout}
 
 className="
-rounded-2xl
-bg-red-900/40
+mt-6
+bg-red-900/50
 border
 border-red-700
-px-4
+rounded-2xl
+px-6
 py-3
 font-bold
 "
 
 >
-
-خروج
-
+🚪 تسجيل خروج
 </button>
 
 
@@ -887,11 +847,28 @@ font-bold
 
 
 
-<div className="space-y-4">
+
+<h2 className="
+text-3xl
+font-black
+mb-5
+">
+الخدمات السريعة ⚡
+</h2>
+
+
+
+<div
+className="
+grid
+grid-cols-1
+md:grid-cols-2
+gap-5
+"
+>
 
 
 {
-
 menuItems.map(item=>(
 
 
@@ -902,56 +879,59 @@ key={item.title}
 onClick={()=>window.location.href=item.link}
 
 className="
-w-full
-rounded-3xl
-bg-[#0b1220]
+rounded-[35px]
+bg-slate-900
 border
-border-[#1e293b]
-p-5
+border-slate-800
+p-7
 flex
 items-center
-gap-4
+gap-5
 text-right
-active:scale-95
+hover:border-blue-500
+hover:-translate-y-1
 transition
+shadow-xl
 "
 
 >
 
 
-<div className="text-5xl">
-
+<div className="
+w-20
+h-20
+rounded-3xl
+bg-blue-950
+flex
+items-center
+justify-center
+text-5xl
+"
+>
 {item.icon}
-
 </div>
 
 
 
-<div className="flex-1">
+<div>
 
-
-<h2 className="text-xl font-black">
-
+<h3 className="
+text-2xl
+font-black
+"
+>
 {item.title}
-
-</h2>
-
+</h3>
 
 
-<p className="text-sm text-slate-400 mt-1">
-
+<p className="
+text-slate-400
+mt-2
+"
+>
 {item.desc}
-
 </p>
 
-
-</div>
-
-
-
-<div className="text-blue-400 text-2xl">
-
-←
 
 </div>
 
@@ -963,6 +943,7 @@ transition
 ))
 
 }
+
 
 
 </div>
@@ -978,23 +959,14 @@ transition
 
 }
 
-
-
-
-
-
-
 // =============================
 // CHILD DASHBOARD
 // =============================
 
-
 return(
 
 <main
-
 dir="rtl"
-
 className="
 min-h-screen
 bg-[#050816]
@@ -1002,53 +974,41 @@ text-white
 px-4
 py-6
 "
-
 >
-
 
 <div className="max-w-5xl mx-auto">
 
 
+{/* HEADER */}
 
-<div
-
-className="
+<div className="
 flex
 justify-between
 items-start
 mb-8
-"
-
->
-
+">
 
 <div>
 
-
 <p className="text-blue-400 font-bold">
-
 🏃 ماراثون الخدمة
-
 </p>
 
 
-<h1
-className="
+<h1 className="
 text-3xl
 font-black
 mt-2
-"
->
-
+">
 {getGreeting()}
-
 </h1>
 
 
-<p className="text-slate-400 mt-2">
-
+<p className="
+text-slate-400
+mt-2
+">
 معركتك بدأت... أثبت إن فريقك الأقوى 🔥
-
 </p>
 
 
@@ -1057,9 +1017,7 @@ mt-2
 
 
 <button
-
 onClick={logout}
-
 className="
 bg-slate-900
 border
@@ -1069,11 +1027,8 @@ py-3
 rounded-2xl
 font-bold
 "
-
 >
-
 خروج
-
 </button>
 
 
@@ -1083,45 +1038,24 @@ font-bold
 
 
 
-<div
+{/* CURRENT TEAM */}
 
+<div
 className="
 rounded-[35px]
-bg-[#0f2747]
+bg-gradient-to-br
+from-blue-900
+to-slate-950
 border
-border-blue-900
+border-blue-500/30
 p-7
-shadow-2xl
 mb-6
-"
-
->
-
-
-<p className="text-blue-200">
-
-فريقك الحالي
-
-</p>
-
-
-<h2
-className="
-text-4xl
-font-black
-mt-3
+shadow-xl
 "
 >
 
-{teamName}
 
-</h2>
-
-
-
-<div
-className="
-mt-5
+<div className="
 flex
 justify-between
 items-center
@@ -1131,20 +1065,34 @@ items-center
 
 <div>
 
-<p className="text-sm text-blue-200">
+<p className="text-blue-200">
+فريقك الحالي 🏆
+</p>
 
+
+<h2 className="
+text-4xl
+font-black
+mt-3
+">
+{teamName}
+</h2>
+
+
+<p className="
+text-blue-200
+mt-5
+">
 ترتيب الفريق
-
 </p>
 
 
-
-<p className="text-5xl font-black">
-
+<p className="
+text-6xl
+font-black
+">
 #
-
-{dashboardLoading?"?":teamRank}
-
+{dashboardLoading ? "?" : teamRank}
 </p>
 
 
@@ -1152,51 +1100,89 @@ items-center
 
 
 
-<div className="text-7xl">
 
-🏆
+<div>
 
-</div>
+{
+ranking.find(
+team=>team.teamId===loggedUser?.team_id
+)?.image_url
+?
 
+<img
 
-</div>
-
-
-</div>
-
-
-
-
-
-<div
+src={
+ranking.find(
+team=>team.teamId===loggedUser?.team_id
+)?.image_url || ""
+}
 
 className="
+w-28
+h-28
+rounded-full
+object-cover
+border-4
+border-white/20
+shadow-xl
+"
+
+/>
+
+:
+
+<div
+className="
+w-28
+h-28
+rounded-full
+bg-slate-800
+flex
+items-center
+justify-center
+text-5xl
+"
+>
+🏆
+</div>
+
+}
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+{/* POINTS */}
+
+<div className="
 grid
 grid-cols-2
 gap-4
 mb-7
-"
-
->
+">
 
 
-<div
-
-className="
+<div className="
 rounded-3xl
 bg-slate-900
 border
 border-slate-800
 p-5
-"
-
->
-
+">
 
 <p className="text-slate-400">
-
-نقاط الفريق
-
+⭐ نقاط الفريق
 </p>
 
 
@@ -1207,7 +1193,13 @@ text-blue-400
 mt-2
 ">
 
-{dashboardLoading?"...":teamPoints}
+{
+dashboardLoading
+?
+"..."
+:
+teamPoints
+}
 
 </h3>
 
@@ -1217,23 +1209,17 @@ mt-2
 
 
 
-<div
-
-className="
+<div className="
 rounded-3xl
 bg-slate-900
 border
 border-slate-800
 p-5
-"
-
->
+">
 
 
 <p className="text-slate-400">
-
-المركز الحالي
-
+🏅 المركز الحالي
 </p>
 
 
@@ -1272,16 +1258,19 @@ teamRank===3
 
 
 
-<div
 
+
+{/* RANKING */}
+
+<div
 className="
 rounded-[35px]
 bg-slate-900
 border
 border-slate-800
 p-6
+mb-6
 "
-
 >
 
 
@@ -1290,9 +1279,7 @@ text-2xl
 font-black
 mb-5
 ">
-
-🔥 ترتيب المعركة
-
+🔥 ترتيب الفرق
 </h2>
 
 
@@ -1301,14 +1288,11 @@ mb-5
 
 
 {
-
-ranking.slice(0,3).map(team=>(
+ranking.slice(0,5).map(team=>(
 
 
 <div
-
 key={team.teamId}
-
 className="
 rounded-2xl
 bg-slate-800
@@ -1317,25 +1301,103 @@ flex
 justify-between
 items-center
 "
-
 >
 
 
-<div className="font-black">
+<div className="
+flex
+items-center
+gap-4
+">
 
-{team.rank===1?"🥇":team.rank===2?"🥈":"🥉"}
+
+{
+team.image_url
+?
+
+<img
+
+src={team.image_url}
+
+className="
+w-14
+h-14
+rounded-full
+object-cover
+border
+border-blue-500/30
+"
+
+/>
+
+:
+
+<div
+
+className="
+w-14
+h-14
+rounded-full
+bg-slate-700
+flex
+items-center
+justify-center
+"
+
+>
+🏆
+</div>
+
+}
+
+
+
+<div>
+
+<p className="font-black text-lg">
+
+{
+team.rank===1
+?
+"🥇"
+:
+team.rank===2
+?
+"🥈"
+:
+team.rank===3
+?
+"🥉"
+:
+""
+}
 
 {" "}
 
 {team.name}
 
+</p>
+
+
+<p className="text-slate-400">
+{team.points} نقطة
+</p>
+
+
+</div>
+
+
 </div>
 
 
 
-<div className="font-bold">
+<div className="
+font-black
+text-blue-400
+"
+>
 
-{team.points} نقطة
+#{team.rank}
 
 </div>
 
@@ -1344,7 +1406,6 @@ items-center
 
 
 ))
-
 
 }
 
@@ -1355,6 +1416,70 @@ items-center
 </div>
 
 
+
+
+
+
+
+
+{/* LESSON */}
+
+<div
+
+className="
+rounded-[35px]
+bg-gradient-to-br
+from-slate-900
+to-blue-950
+border
+border-blue-500/20
+p-6
+mt-6
+"
+
+>
+
+
+<h2 className="
+text-2xl
+font-black
+mb-4
+">
+📖 درس الأسبوع
+</h2>
+
+
+<p className="
+text-slate-400
+mb-5
+">
+شاهد درس الأسبوع واحفظ آية اليوم ❤️
+</p>
+
+
+
+<button
+
+onClick={()=>window.location.href="/child-weekly-lesson"}
+
+className="
+w-full
+rounded-2xl
+bg-blue-600
+py-4
+font-black
+text-lg
+"
+
+>
+🚀 دخول الدرس
+</button>
+
+
+</div>
+
+
+
 </div>
 
 
@@ -1362,6 +1487,5 @@ items-center
 
 
 );
-
 
 }

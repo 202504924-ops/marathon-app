@@ -4,156 +4,502 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 export default function AddTeamPage() {
+
   const [teamName, setTeamName] = useState("");
+  const [image, setImage] = useState<File | null>(null);
+  const [preview, setPreview] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+
+
   useEffect(() => {
-    const savedUser = localStorage.getItem("marathon_user");
+
+    const savedUser =
+      localStorage.getItem("marathon_user");
+
 
     if (!savedUser) {
-      window.location.href = "/";
+
+      window.location.href="/";
       return;
+
     }
+
 
     try {
-      const user = JSON.parse(savedUser);
 
-      if (user.type !== "servant") {
-        window.location.href = "/";
+      const user =
+        JSON.parse(savedUser);
+
+
+      if(user.type !== "servant"){
+
+        window.location.href="/";
+
       }
+
+
     } catch {
-      window.location.href = "/";
+
+      window.location.href="/";
+
     }
+
+
   }, []);
 
-  async function addTeam() {
-    const cleanName = teamName.trim();
 
-    if (!cleanName) {
-      setMessage("اكتب اسم الفريق الأول");
-      return;
+
+
+
+  function selectImage(
+    e: React.ChangeEvent<HTMLInputElement>
+  ){
+
+    const file =
+      e.target.files?.[0];
+
+
+    if(!file) return;
+
+
+    setImage(file);
+
+
+    setPreview(
+      URL.createObjectURL(file)
+    );
+
+  }
+
+
+
+
+
+  async function uploadImage(){
+
+    if(!image) return null;
+
+
+
+    const fileExt =
+      image.name.split(".").pop();
+
+
+    const fileName =
+      `${Date.now()}.${fileExt}`;
+
+
+
+    const {error} =
+      await supabase.storage
+      .from("team-images")
+      .upload(
+        fileName,
+        image
+      );
+
+
+
+    if(error){
+
+      console.log(
+        "UPLOAD ERROR",
+        error
+      );
+
+      throw error;
+
     }
+
+
+
+
+    const {data} =
+      supabase.storage
+      .from("team-images")
+      .getPublicUrl(
+        fileName
+      );
+
+
+
+    return data.publicUrl;
+
+  }
+
+
+
+
+
+  async function addTeam(){
+
+
+    const cleanName =
+      teamName.trim();
+
+
+
+    if(!cleanName){
+
+      setMessage(
+        "اكتب اسم الفريق الأول"
+      );
+
+      return;
+
+    }
+
+
 
     setLoading(true);
     setMessage("");
 
-    try {
-      const { data: existingTeam, error: checkError } = await supabase
-        .from("teams")
-        .select("id, name")
-        .ilike("name", cleanName)
-        .maybeSingle();
 
-      if (checkError) {
-        console.error(checkError);
-        setMessage("حصل خطأ أثناء التأكد من الفريق");
+
+    try{
+
+
+      const {data:existingTeam}
+      =
+      await supabase
+      .from("teams")
+      .select("id,name")
+      .ilike(
+        "name",
+        cleanName
+      )
+      .maybeSingle();
+
+
+
+      if(existingTeam){
+
+        setMessage(
+          "الفريق ده موجود بالفعل"
+        );
+
         setLoading(false);
         return;
+
       }
 
-      if (existingTeam) {
-        setMessage("الفريق ده موجود بالفعل");
+
+
+
+      let imageUrl = null;
+
+
+
+      if(image){
+
+        imageUrl =
+          await uploadImage();
+
+      }
+
+
+
+
+
+
+      const {error} =
+      await supabase
+      .from("teams")
+      .insert({
+
+        name:cleanName,
+
+        points:0,
+
+        image_url:imageUrl
+
+      });
+
+
+
+
+
+      if(error){
+
+        console.log(error);
+
+        setMessage(
+          error.message
+        );
+
         setLoading(false);
+
         return;
+
       }
 
-      const { error } = await supabase
-  .from("teams")
-  .insert({
-    name: cleanName,
-    points: 0,
-  });
 
-     if (error) {
-  console.log("ADD TEAM ERROR MESSAGE:", error.message);
-  console.log("ADD TEAM ERROR DETAILS:", error.details);
-  console.log("ADD TEAM ERROR HINT:", error.hint);
 
-  alert(
-    error.message ||
-    "خطأ غير معروف"
-  );
-
-  setLoading(false);
-  return;
-}
 
       setTeamName("");
-      setMessage("تم إضافة الفريق بنجاح");
 
-    } catch (error) {
-      console.error(error);
-      setMessage("حصل خطأ غير متوقع");
+      setImage(null);
+
+      setPreview("");
+
+      setMessage(
+        "تم إضافة الفريق بنجاح 🏆"
+      );
+
+
+
+
+    }catch(error){
+
+
+      console.log(error);
+
+      setMessage(
+        "حصل خطأ أثناء إضافة الفريق"
+      );
+
+
     }
 
+
+
     setLoading(false);
+
   }
 
+
+
+
+
   return (
-    <main className="min-h-screen bg-slate-950 text-white px-4 py-8">
-      <div className="mx-auto max-w-xl">
 
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => (window.location.href = "/servant/dashboard")}
-            className="mb-5 text-sm text-slate-400 hover:text-white transition"
-          >
-            ← رجوع للوحة التحكم
-          </button>
+    <main
+      dir="rtl"
+      className="
+      min-h-screen
+      bg-slate-950
+      text-white
+      px-4
+      py-8
+      "
+    >
 
-          <h1 className="text-3xl font-bold">
-            إضافة فريق
-          </h1>
 
-          <p className="mt-2 text-slate-400">
-            أضف فريق جديد للماراثون
-          </p>
-        </div>
+      <div className="max-w-xl mx-auto">
 
-        {/* Card */}
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
 
-          <label className="mb-3 block text-sm font-medium text-slate-300">
-            اسم الفريق
-          </label>
+        <button
+          onClick={()=>
+            window.location.href="/servant/dashboard"
+          }
+          className="
+          mb-6
+          text-slate-400
+          "
+        >
+
+          ← رجوع
+
+        </button>
+
+
+
+        <h1 className="
+        text-3xl
+        font-black
+        mb-2
+        ">
+
+          🏆 إضافة فريق
+
+        </h1>
+
+
+
+        <p className="
+        text-slate-400
+        mb-8
+        ">
+
+          أضف فريق جديد للماراثون
+
+        </p>
+
+
+
+
+        <div className="
+        rounded-3xl
+        bg-slate-900
+        border
+        border-slate-800
+        p-6
+        ">
+
+
+
+          <div className="
+          flex
+          justify-center
+          mb-6
+          ">
+
+
+            <label
+              className="
+              cursor-pointer
+              "
+            >
+
+
+              {
+
+              preview ?
+
+              <img
+                src={preview}
+                className="
+                h-32
+                w-32
+                rounded-full
+                object-cover
+                border-4
+                border-blue-500
+                shadow-xl
+                "
+              />
+
+              :
+
+              <div className="
+              h-32
+              w-32
+              rounded-full
+              bg-blue-900
+              flex
+              items-center
+              justify-center
+              text-5xl
+              border-4
+              border-blue-500
+              "
+              >
+
+                🏆
+
+              </div>
+
+              }
+
+
+
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={selectImage}
+              />
+
+
+            </label>
+
+
+          </div>
+
+
+
+
 
           <input
-            type="text"
+
             value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                addTeam();
-              }
-            }}
-            placeholder="مثال: فريق النور"
-            className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-4 text-white outline-none transition placeholder:text-slate-600 focus:border-blue-500"
+
+            onChange={(e)=>
+              setTeamName(e.target.value)
+            }
+
+            placeholder="اسم الفريق"
+
+            className="
+            w-full
+            rounded-xl
+            bg-slate-950
+            border
+            border-slate-700
+            px-4
+            py-4
+            outline-none
+            focus:border-blue-500
+            "
+
           />
 
+
+
+
+
           <button
+
             onClick={addTeam}
+
             disabled={loading}
-            className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-4 font-bold transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+
+            className="
+            mt-5
+            w-full
+            rounded-xl
+            bg-blue-600
+            py-4
+            font-black
+            hover:bg-blue-500
+            "
+
           >
-            {loading ? "جاري الإضافة..." : "إضافة الفريق"}
+
+            {
+              loading
+              ?
+              "جاري الإضافة..."
+              :
+              "إضافة الفريق 🏆"
+            }
+
+
           </button>
 
-          {message && (
-            <div
-              className={`mt-4 rounded-xl px-4 py-3 text-center text-sm ${
-                message.includes("بنجاح")
-                  ? "bg-green-500/10 text-green-400 border border-green-500/20"
-                  : "bg-red-500/10 text-red-400 border border-red-500/20"
-              }`}
-            >
-              {message}
-            </div>
-          )}
+
+
+
+          {message &&
+
+          <div className="
+          mt-5
+          text-center
+          bg-slate-800
+          rounded-xl
+          p-4
+          "
+          >
+
+            {message}
+
+          </div>
+
+          }
+
+
+
         </div>
 
+
       </div>
+
+
     </main>
+
   );
+
 }

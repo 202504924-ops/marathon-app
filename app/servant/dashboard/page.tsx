@@ -25,6 +25,7 @@ type RankingTeam = {
   name:string;
   points:number;
   childrenCount:number;
+  image_url?:string | null;
 };
 
 
@@ -239,7 +240,7 @@ await Promise.all([
 
 supabase
 .from("teams")
-.select("id,name")
+.select("id,name,image_url")
 .order("id"),
 
 
@@ -412,6 +413,7 @@ teamsData.map(
 id:team.id,
 
 name:team.name,
+image_url:team.image_url,
 
 points:
 pointsMap.get(team.id) ?? 0,
@@ -1256,45 +1258,41 @@ gap-4
 >
 
 
-<div
-
-className="
-text-3xl
-font-black
-"
-
->
+<div>
 
 {
+team.image_url ?
 
-index===0
-
-?
-
-"🥇"
-
-:
-
-index===1
-
-?
-
-"🥈"
-
-:
-
-index===2
-
-?
-
-"🥉"
+<img
+src={team.image_url}
+className="
+w-16
+h-16
+rounded-full
+object-cover
+border-2
+border-blue-500
+"
+/>
 
 :
 
-`#${index+1}`
+<div
+className="
+w-16
+h-16
+rounded-full
+bg-blue-900
+flex
+items-center
+justify-center
+text-3xl
+"
+>
+🏆
+</div>
 
 }
-
 
 </div>
 

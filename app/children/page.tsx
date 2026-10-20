@@ -16,6 +16,7 @@ type Child = {
 type Team = {
   id:number;
   name:string;
+  image_url?:string | null;
 };
 
 
@@ -58,7 +59,7 @@ return;
 
 const {data:teamData}=await supabase
 .from("teams")
-.select("id,name");
+.select("id,name,image_url");
 
 
 
@@ -81,6 +82,16 @@ t=>t.id===id
 );
 
 return team?.name || "بدون فريق";
+
+}
+
+function teamImage(id:number){
+
+const team = teams.find(
+t=>t.id===id
+);
+
+return team?.image_url || null;
 
 }
 
