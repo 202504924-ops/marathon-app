@@ -4,44 +4,68 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 
+
 type Child = {
-  id:number;
-  name:string;
-  team_id:number;
+
+id:number;
+
+name:string;
+
+team_id:number;
+
 };
+
 
 
 type Team = {
-  id:number;
-  name:string;
+
+id:number;
+
+name:string;
+
 };
+
 
 
 type AttendanceRow = {
-  child_id:number;
-  points:number;
+
+child_id:number;
+
+points:number;
+
 };
+
 
 
 type AttendanceReport = {
-  teamName:string;
-  present:number;
-  total:number;
-  percentage:number;
-  points:number;
+
+teamName:string;
+
+present:number;
+
+total:number;
+
+percentage:number;
+
+points:number;
+
 };
+
 
 
 
 export default function AttendancePage(){
 
 
+
 const [children,setChildren] =
 useState<Child[]>([]);
 
 
+
 const [teams,setTeams] =
 useState<Team[]>([]);
+
 
 
 const [todayAttendance,setTodayAttendance] =
@@ -53,6 +77,7 @@ const [search,setSearch] =
 useState("");
 
 
+
 const [selectedChild,setSelectedChild] =
 useState<Child|null>(null);
 
@@ -60,6 +85,7 @@ useState<Child|null>(null);
 
 const [loading,setLoading] =
 useState(false);
+
 
 
 const [pointsLoading,setPointsLoading] =
@@ -77,14 +103,6 @@ useState<AttendanceReport[]>([]);
 
 
 
-const [showPresent,setShowPresent] =
-useState(false);
-
-
-
-const [showAbsent,setShowAbsent] =
-useState(false);
-
 
 
 useEffect(()=>{
@@ -95,28 +113,50 @@ loadData();
 
 
 
+
+
+
+
 function getToday(){
 
+
 return new Date().toLocaleDateString(
+
 "en-CA",
+
 {
+
 timeZone:"Africa/Cairo"
-}
-);
 
 }
+
+);
+
+
+}
+
+
+
+
 
 
 
 function isFriday(date:Date){
 
+
 return date.getDay()===5;
+
 
 }
 
 
 
+
+
+
+
 async function loadData(){
+
 
 
 const today=getToday();
@@ -127,48 +167,78 @@ const [
 childrenResult,
 teamsResult,
 attendanceResult
+
 ]=await Promise.all([
 
 
+
 supabase
+
 .from("children")
+
 .select("id,name,team_id")
+
 .order("name"),
 
 
 
+
 supabase
+
 .from("teams")
+
 .select("id,name")
+
 .order("id"),
 
 
 
+
+
 supabase
+
 .from("attendance")
+
 .select("child_id,points")
+
 .eq(
+
 "attendance_date",
+
 today
+
 )
+
+
 
 ]);
 
 
 
+
+
 if(
+
 childrenResult.error ||
+
 teamsResult.error ||
+
 attendanceResult.error
+
 ){
+
 
 setMessage(
 "حصل خطأ أثناء تحميل البيانات"
 );
 
+
 return;
 
+
 }
+
+
 
 
 
@@ -184,36 +254,50 @@ teamsResult.data || []
 
 
 
+
 setTodayAttendance(
 
+
 (attendanceResult.data || [])
+
 .map(
+
 (item:AttendanceRow)=>
+
 item.child_id
+
 )
+
 
 );
 
 
 
 }
-// =============================
-// HELPERS
-// =============================
+
+
+
+
+
 
 
 function getTeamName(teamId:number){
 
+
+
 return (
+
 teams.find(
+
 team=>team.id===teamId
+
 )?.name || "بدون فريق"
+
 );
 
+
+
 }
-
-
-
 // =============================
 // REGISTER ATTENDANCE
 // =============================
@@ -249,9 +333,7 @@ return;
 
 
 if(
-todayAttendance.includes(
-selectedChild.id
-)
+todayAttendance.includes(selectedChild.id)
 ){
 
 setMessage(
@@ -273,7 +355,9 @@ const today=getToday();
 
 
 const {error}=await supabase
+
 .from("attendance")
+
 .insert({
 
 child_id:selectedChild.id,
@@ -294,26 +378,37 @@ points:0
 
 
 
+
 if(error){
 
+
 console.log(error);
+
 
 setMessage(
 "حصل خطأ أثناء تسجيل الحضور"
 );
 
+
 setLoading(false);
 
+
 return;
+
 
 }
 
 
 
+
 setTodayAttendance(prev=>[
+
 ...prev,
+
 selectedChild.id
+
 ]);
+
 
 
 
@@ -336,6 +431,9 @@ setLoading(false);
 
 
 
+
+
+
 // =============================
 // CALCULATE TEAM POINTS
 // =============================
@@ -350,13 +448,17 @@ setMessage("");
 
 if(!isFriday(new Date())){
 
+
 setMessage(
 "حساب النقاط متاح يوم الجمعة فقط"
 );
 
+
 return;
 
+
 }
+
 
 
 
@@ -378,8 +480,14 @@ for(const team of teams){
 
 const teamChildren =
 children.filter(
-child=>child.team_id===team.id
+
+child=>
+
+child.team_id===team.id
+
 );
+
+
 
 
 
@@ -388,13 +496,18 @@ continue;
 
 
 
+
+
 const present =
 teamChildren.filter(
+
 child=>
-todayAttendance.includes(
-child.id
-)
+
+todayAttendance.includes(child.id)
+
 ).length;
+
+
 
 
 
@@ -403,28 +516,47 @@ teamChildren.length;
 
 
 
+
+
 const percentage =
 Math.round(
+
 (present / total) * 100
+
 );
 
 
 
-let points=40;
+
+let points = 0;
 
 
+if(percentage >= 75){
 
-if(percentage>=75){
+  points = 100;
 
-points=100;
+}
+
+else if(percentage >= 50){
+
+  points = 70;
 
 }
 
-else if(percentage>=50){
+else if(percentage >= 20){
 
-points=70;
+  points = 40;
 
 }
+
+else{
+
+  points = 0;
+
+}
+
+
+
 
 
 
@@ -446,22 +578,33 @@ points
 
 
 
+
+
 const {data:oldPoint}=await supabase
+
 .from("team_points")
+
 .select("id")
+
 .eq(
 "team_id",
 team.id
 )
+
 .eq(
 "type",
 "attendance"
 )
+
 .eq(
 "reason",
 `attendance-${getToday()}`
 )
+
 .maybeSingle();
+
+
+
 
 
 
@@ -473,8 +616,12 @@ continue;
 
 
 
+
+
 await supabase
+
 .from("team_points")
+
 .insert({
 
 team_id:team.id,
@@ -490,6 +637,7 @@ reason:
 
 
 
+
 }
 
 
@@ -500,7 +648,7 @@ setAttendanceReport(report);
 
 
 setMessage(
-"تم حساب نقاط الحضور للفرق ✅"
+"تم اعتماد نقاط الحضور للفرق ✅"
 );
 
 
@@ -509,49 +657,61 @@ setMessage(
 
 catch(error){
 
+
 console.log(error);
+
+
 
 setMessage(
 "حصل خطأ أثناء حساب النقاط"
 );
 
 
+
 }
 
 finally{
 
+
 setPointsLoading(false);
 
+
+}
+
+
 }
 
 
 
-}
+
+
+
+
 const filteredChildren =
 children.filter(child=>
+
 child.name
+
 .toLowerCase()
+
 .includes(
+
 search.toLowerCase()
+
 )
+
 );
 
 
 
-const presentChildren =
-children.filter(child=>
-todayAttendance.includes(child.id)
-);
+const presentCount =
+todayAttendance.length;
 
 
 
-const absentChildren =
-children.filter(child=>
-!todayAttendance.includes(child.id)
-);
 
-
-
+const absentCount =
+children.length - presentCount;
 return (
 
 <main
@@ -569,24 +729,42 @@ text-white
 <div className="mx-auto max-w-2xl">
 
 
+
 <button
+
 onClick={()=>
 window.location.href="/servant/dashboard"
 }
+
 className="
 mb-6
 text-slate-400
+hover:text-white
 "
+
 >
 ← رجوع للوحة التحكم
 </button>
 
 
 
-<p className="text-blue-400 font-bold">
-🏃 ماراثون الخدمة
-</p>
 
+<div className="
+rounded-3xl
+bg-gradient-to-br
+from-blue-900
+to-slate-900
+p-6
+border
+border-slate-800
+"
+>
+
+<p className="text-blue-300 font-bold">
+
+🏃 ماراثون الخدمة
+
+</p>
 
 
 <h1 className="
@@ -600,13 +778,12 @@ mt-2
 </h1>
 
 
-
 <p className="
-text-slate-400
 mt-2
+text-slate-300
 ">
 
-الحضور يوم الجمعة فقط
+سجل حضور الأطفال يوم الجمعة واحسب نقاط الفرق
 
 </p>
 
@@ -614,7 +791,78 @@ mt-2
 
 
 <div className="
-mt-8
+grid
+grid-cols-2
+gap-3
+mt-5
+">
+
+
+<div className="
+rounded-2xl
+bg-slate-950
+p-4
+text-center
+">
+
+<p className="text-slate-400 text-sm">
+الحضور
+</p>
+
+
+<p className="
+text-3xl
+font-black
+text-green-400
+">
+
+{presentCount}
+
+</p>
+
+
+</div>
+
+
+
+<div className="
+rounded-2xl
+bg-slate-950
+p-4
+text-center
+">
+
+<p className="text-slate-400 text-sm">
+الغياب
+</p>
+
+
+<p className="
+text-3xl
+font-black
+text-red-400
+">
+
+{absentCount}
+
+</p>
+
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<div className="
+mt-6
 rounded-3xl
 bg-slate-900
 border
@@ -624,9 +872,17 @@ p-6
 >
 
 
-<label className="text-sm text-slate-300">
-البحث عن الطفل
-</label>
+<h2 className="
+text-xl
+font-black
+mb-4
+">
+
+🔍 البحث عن طفل
+
+</h2>
+
+
 
 
 <input
@@ -644,7 +900,6 @@ setSelectedChild(null);
 placeholder="اكتب اسم الطفل..."
 
 className="
-mt-2
 w-full
 rounded-xl
 bg-slate-950
@@ -659,20 +914,22 @@ py-3
 
 
 
+
 {search && !selectedChild && (
 
 <div className="
 mt-3
 rounded-xl
-bg-slate-950
+overflow-hidden
 border
 border-slate-800
-overflow-hidden
 "
 >
 
 
-{filteredChildren.map(child=>(
+{
+
+filteredChildren.map(child=>(
 
 
 <button
@@ -689,6 +946,7 @@ setSearch(child.name);
 
 className="
 w-full
+bg-slate-950
 p-4
 border-b
 border-slate-800
@@ -700,7 +958,9 @@ hover:bg-slate-800
 
 
 <p className="font-bold">
+
 {child.name}
+
 </p>
 
 
@@ -714,10 +974,13 @@ hover:bg-slate-800
 </button>
 
 
-))}
+))
+
+}
 
 
 </div>
+
 
 )}
 
@@ -725,7 +988,9 @@ hover:bg-slate-800
 
 
 
+
 {selectedChild && (
+
 
 <div className="
 mt-5
@@ -738,10 +1003,7 @@ p-5
 >
 
 
-<h2 className="
-text-xl
-font-black
-">
+<h2 className="text-xl font-black">
 
 {selectedChild.name}
 
@@ -768,26 +1030,33 @@ w-full
 rounded-xl
 bg-blue-600
 py-3
-font-bold
+font-black
 "
 
 >
 
 {
+
 loading
+
 ?
+
 "جاري التسجيل..."
+
 :
-"تسجيل الحضور"
+
+"✅ تسجيل الحضور"
+
 }
+
 
 </button>
 
 
 </div>
 
-)}
 
+)}
 
 
 
@@ -800,8 +1069,7 @@ bg-slate-950
 p-4
 text-center
 font-bold
-"
->
+">
 
 {message}
 
@@ -811,45 +1079,72 @@ font-bold
 
 
 
-
-
-
-<div className="
-mt-5
-rounded-2xl
-bg-slate-950
-p-5
-text-center
-"
->
-
-<p className="text-slate-400">
-
-عدد الحضور اليوم
-
-</p>
-
-
-<p className="
-text-4xl
-font-black
-text-blue-400
-">
-
-{todayAttendance.length}
-
-</p>
-
-
 </div>
 
 
 
 
 
+
+{/* زر الحساب تحت خالص */}
+
+<div className="
+mt-10
+rounded-3xl
+border
+border-yellow-500/30
+bg-yellow-500/10
+p-5
+"
+>
+
+
+<h2 className="
+font-black
+text-lg
+">
+
+⭐ اعتماد نقاط الحضور
+
+</h2>
+
+
+<p className="
+text-sm
+text-slate-300
+mt-2
+">
+
+سيتم حساب نسبة حضور كل فريق وإضافة النقاط تلقائياً:
+<br/>
+75% فأكثر = 100 نقطة
+<br/>
+50% إلى أقل من 75% = 70 نقطة
+<br/>
+أقل من 50% = 40 نقطة
+
+</p>
+
+
+
+
 <button
 
-onClick={calculateAttendancePoints}
+onClick={()=>{
+
+const confirmAction =
+window.confirm(
+"هل أنت متأكد من حساب نقاط الحضور؟ لا يمكن تكرارها لنفس اليوم"
+);
+
+
+if(confirmAction){
+
+calculateAttendancePoints();
+
+}
+
+}}
 
 disabled={pointsLoading}
 
@@ -857,7 +1152,8 @@ className="
 mt-5
 w-full
 rounded-xl
-bg-green-600
+bg-yellow-500
+text-black
 py-3
 font-black
 "
@@ -869,16 +1165,21 @@ font-black
 pointsLoading
 
 ?
+
 "جاري الحساب..."
 
 :
 
-"⭐ حساب نقاط الحضور للفرق"
+"⭐ حساب نقاط الفرق"
 
 }
 
+
 </button>
 
+
+
+</div>
 
 
 
@@ -886,6 +1187,7 @@ pointsLoading
 
 
 {attendanceReport.length>0 && (
+
 
 <div className="
 mt-6
@@ -904,7 +1206,7 @@ font-black
 mb-4
 ">
 
-📊 تقرير الفرق
+📊 تقرير النقاط
 
 </h2>
 
@@ -923,7 +1225,7 @@ attendanceReport.map((team,index)=>(
 key={index}
 
 className="
-rounded-xl
+rounded-2xl
 bg-slate-800
 p-4
 "
@@ -931,23 +1233,23 @@ p-4
 >
 
 
-<p className="font-black">
+<p className="font-black text-lg">
 
 {team.teamName}
 
 </p>
 
 
-<p className="text-sm text-slate-300">
+<p className="text-slate-300">
 
 حضر {team.present} من {team.total}
 
 </p>
 
 
-<p className="text-sm text-slate-300">
+<p className="text-slate-300">
 
-النسبة: {team.percentage}%
+النسبة {team.percentage}%
 
 </p>
 
@@ -955,7 +1257,7 @@ p-4
 <p className="
 mt-2
 font-black
-text-green-400
+text-yellow-400
 ">
 
 ⭐ {team.points} نقطة
@@ -968,6 +1270,7 @@ text-green-400
 
 ))
 
+
 }
 
 
@@ -976,13 +1279,10 @@ text-green-400
 
 </div>
 
+
 )}
 
 
-
-
-
-</div>
 
 
 </div>
@@ -991,5 +1291,6 @@ text-green-400
 </main>
 
 );
+
 
 }
