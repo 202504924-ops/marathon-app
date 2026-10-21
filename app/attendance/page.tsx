@@ -4,103 +4,80 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 
-
 type Child = {
-
-id:number;
-
-name:string;
-
-team_id:number;
-
+  id:number;
+  name:string;
+  team_id:number;
 };
-
 
 
 type Team = {
-
-id:number;
-
-name:string;
-
+  id:number;
+  name:string;
 };
-
 
 
 type AttendanceRow = {
-
-child_id:number;
-
-points:number;
-
+  child_id:number;
 };
-
 
 
 type AttendanceReport = {
-
-teamName:string;
-
-present:number;
-
-total:number;
-
-percentage:number;
-
-points:number;
-
+  teamName:string;
+  present:number;
+  total:number;
+  percentage:number;
+  points:number;
 };
-
 
 
 
 export default function AttendancePage(){
 
 
-
 const [children,setChildren] =
 useState<Child[]>([]);
-
 
 
 const [teams,setTeams] =
 useState<Team[]>([]);
 
 
-
 const [todayAttendance,setTodayAttendance] =
 useState<number[]>([]);
-
 
 
 const [search,setSearch] =
 useState("");
 
 
-
 const [selectedChild,setSelectedChild] =
 useState<Child|null>(null);
-
 
 
 const [loading,setLoading] =
 useState(false);
 
 
-
 const [pointsLoading,setPointsLoading] =
 useState(false);
-
 
 
 const [message,setMessage] =
 useState("");
 
 
-
 const [attendanceReport,setAttendanceReport] =
 useState<AttendanceReport[]>([]);
 
+
+
+const [showPresent,setShowPresent] =
+useState(false);
+
+
+const [showAbsent,setShowAbsent] =
+useState(false);
 
 
 
@@ -114,49 +91,29 @@ loadData();
 
 
 
-
-
-
 function getToday(){
 
-
 return new Date().toLocaleDateString(
-
 "en-CA",
-
 {
-
 timeZone:"Africa/Cairo"
-
 }
-
 );
 
-
 }
-
-
-
-
 
 
 
 function isFriday(date:Date){
 
-
 return date.getDay()===5;
-
 
 }
 
 
 
 
-
-
-
 async function loadData(){
-
 
 
 const today=getToday();
@@ -167,48 +124,28 @@ const [
 childrenResult,
 teamsResult,
 attendanceResult
-
 ]=await Promise.all([
 
 
-
 supabase
-
 .from("children")
-
 .select("id,name,team_id")
-
 .order("name"),
 
 
-
-
 supabase
-
 .from("teams")
-
 .select("id,name")
-
 .order("id"),
 
 
-
-
-
 supabase
-
 .from("attendance")
-
-.select("child_id,points")
-
+.select("child_id")
 .eq(
-
 "attendance_date",
-
 today
-
 )
-
 
 
 ]);
@@ -216,66 +153,38 @@ today
 
 
 
-
 if(
-
 childrenResult.error ||
-
 teamsResult.error ||
-
 attendanceResult.error
-
 ){
-
 
 setMessage(
 "حصل خطأ أثناء تحميل البيانات"
 );
 
-
 return;
-
 
 }
 
 
 
+setChildren(childrenResult.data || []);
 
 
-setChildren(
-childrenResult.data || []
-);
-
-
-
-setTeams(
-teamsResult.data || []
-);
-
+setTeams(teamsResult.data || []);
 
 
 
 setTodayAttendance(
-
-
 (attendanceResult.data || [])
-
 .map(
-
-(item:AttendanceRow)=>
-
-item.child_id
-
+(item:AttendanceRow)=>item.child_id
 )
-
-
 );
 
 
-
 }
-
-
 
 
 
@@ -283,24 +192,16 @@ item.child_id
 
 function getTeamName(teamId:number){
 
-
-
 return (
-
 teams.find(
-
 team=>team.id===teamId
-
 )?.name || "بدون فريق"
-
 );
 
-
-
 }
-// =============================
-// REGISTER ATTENDANCE
-// =============================
+
+
+
 
 
 async function registerAttendance(){
@@ -320,7 +221,18 @@ return;
 
 
 
-if(!isFriday(new Date())){
+const cairoDate = new Date(
+new Date().toLocaleString(
+"en-US",
+{
+timeZone:"Africa/Cairo"
+}
+)
+);
+
+
+
+if(!isFriday(cairoDate)){
 
 setMessage(
 "تسجيل الحضور متاح يوم الجمعة فقط"
@@ -350,27 +262,16 @@ setLoading(true);
 
 
 
-const today=getToday();
-
-
-
 const {error}=await supabase
-
 .from("attendance")
-
 .insert({
 
 child_id:selectedChild.id,
 
-attendance_date:today,
+attendance_date:getToday(),
 
 attendance_time:
-new Date().toLocaleTimeString(
-"en-US",
-{
-timeZone:"Africa/Cairo"
-}
-),
+cairoDate.toLocaleTimeString(),
 
 points:0
 
@@ -381,34 +282,24 @@ points:0
 
 if(error){
 
-
 console.log(error);
 
-
 setMessage(
-"حصل خطأ أثناء تسجيل الحضور"
+"حصل خطأ أثناء التسجيل"
 );
-
 
 setLoading(false);
 
-
 return;
-
 
 }
 
 
 
-
 setTodayAttendance(prev=>[
-
 ...prev,
-
 selectedChild.id
-
 ]);
-
 
 
 
@@ -425,18 +316,10 @@ setSearch("");
 setLoading(false);
 
 
-
 }
 
 
 
-
-
-
-
-// =============================
-// CALCULATE TEAM POINTS
-// =============================
 
 
 async function calculateAttendancePoints(){
@@ -446,19 +329,26 @@ setMessage("");
 
 
 
-if(!isFriday(new Date())){
-
-
-setMessage(
-"حساب النقاط متاح يوم الجمعة فقط"
+const cairoDate = new Date(
+new Date().toLocaleString(
+"en-US",
+{
+timeZone:"Africa/Cairo"
+}
+)
 );
 
 
+
+if(!isFriday(cairoDate)){
+
+setMessage(
+"حساب النقاط يوم الجمعة فقط"
+);
+
 return;
 
-
 }
-
 
 
 
@@ -473,21 +363,13 @@ const report:AttendanceReport[]=[];
 try{
 
 
-
 for(const team of teams){
-
 
 
 const teamChildren =
 children.filter(
-
-child=>
-
-child.team_id===team.id
-
+child=>child.team_id===team.id
 );
-
-
 
 
 
@@ -496,18 +378,11 @@ continue;
 
 
 
-
-
 const present =
 teamChildren.filter(
-
 child=>
-
 todayAttendance.includes(child.id)
-
 ).length;
-
-
 
 
 
@@ -516,46 +391,34 @@ teamChildren.length;
 
 
 
-
-
 const percentage =
 Math.round(
-
 (present / total) * 100
-
 );
-
 
 
 
 let points = 0;
 
 
+
 if(percentage >= 75){
 
-  points = 100;
+points = 100;
 
 }
 
 else if(percentage >= 50){
 
-  points = 70;
+points = 70;
 
 }
 
 else if(percentage >= 20){
 
-  points = 40;
+points = 40;
 
 }
-
-else{
-
-  points = 0;
-
-}
-
-
 
 
 
@@ -577,51 +440,24 @@ points
 
 
 
-
-
-
 const {data:oldPoint}=await supabase
-
 .from("team_points")
-
 .select("id")
-
-.eq(
-"team_id",
-team.id
-)
-
-.eq(
-"type",
-"attendance"
-)
-
+.eq("team_id",team.id)
+.eq("type","attendance")
 .eq(
 "reason",
 `attendance-${getToday()}`
 )
-
 .maybeSingle();
 
 
 
-
-
-
-if(oldPoint){
-
-continue;
-
-}
-
-
-
+if(!oldPoint){
 
 
 await supabase
-
 .from("team_points")
-
 .insert({
 
 team_id:team.id,
@@ -636,15 +472,15 @@ reason:
 });
 
 
+}
+
 
 
 }
 
 
 
-
 setAttendanceReport(report);
-
 
 
 setMessage(
@@ -657,31 +493,22 @@ setMessage(
 
 catch(error){
 
-
 console.log(error);
 
-
-
 setMessage(
-"حصل خطأ أثناء حساب النقاط"
+"حصل خطأ أثناء الحساب"
 );
-
-
 
 }
 
 finally{
 
-
 setPointsLoading(false);
 
-
 }
 
 
 }
-
-
 
 
 
@@ -689,29 +516,35 @@ setPointsLoading(false);
 
 const filteredChildren =
 children.filter(child=>
-
 child.name
-
 .toLowerCase()
-
 .includes(
-
 search.toLowerCase()
-
 )
+);
 
+
+
+const presentChildren =
+children.filter(child=>
+todayAttendance.includes(child.id)
+);
+
+
+
+const absentChildren =
+children.filter(child=>
+!todayAttendance.includes(child.id)
 );
 
 
 
 const presentCount =
-todayAttendance.length;
-
-
+presentChildren.length;
 
 
 const absentCount =
-children.length - presentCount;
+absentChildren.length;
 return (
 
 <main
@@ -725,56 +558,47 @@ text-white
 "
 >
 
-
 <div className="mx-auto max-w-2xl">
 
 
-
 <button
-
 onClick={()=>
 window.location.href="/servant/dashboard"
 }
-
 className="
 mb-6
 text-slate-400
 hover:text-white
 "
-
 >
 ← رجوع للوحة التحكم
 </button>
 
 
 
-
-<div className="
+<div
+className="
 rounded-3xl
 bg-gradient-to-br
 from-blue-900
 to-slate-900
-p-6
 border
 border-slate-800
+p-6
 "
 >
 
 <p className="text-blue-300 font-bold">
-
 🏃 ماراثون الخدمة
-
 </p>
 
 
 <h1 className="
+mt-2
 text-3xl
 font-black
-mt-2
 ">
-
 تسجيل الحضور
-
 </h1>
 
 
@@ -782,19 +606,16 @@ mt-2
 mt-2
 text-slate-300
 ">
-
-سجل حضور الأطفال يوم الجمعة واحسب نقاط الفرق
-
+سجل حضور الأطفال واحسب نقاط الفرق
 </p>
 
 
 
-
 <div className="
+mt-5
 grid
 grid-cols-2
 gap-3
-mt-5
 ">
 
 
@@ -805,21 +626,17 @@ p-4
 text-center
 ">
 
-<p className="text-slate-400 text-sm">
+<p className="text-slate-400">
 الحضور
 </p>
-
 
 <p className="
 text-3xl
 font-black
 text-green-400
 ">
-
 {presentCount}
-
 </p>
-
 
 </div>
 
@@ -832,24 +649,19 @@ p-4
 text-center
 ">
 
-<p className="text-slate-400 text-sm">
+<p className="text-slate-400">
 الغياب
 </p>
-
 
 <p className="
 text-3xl
 font-black
 text-red-400
 ">
-
 {absentCount}
-
 </p>
 
-
 </div>
-
 
 
 </div>
@@ -871,18 +683,13 @@ p-6
 "
 >
 
-
 <h2 className="
 text-xl
 font-black
 mb-4
 ">
-
 🔍 البحث عن طفل
-
 </h2>
-
-
 
 
 <input
@@ -908,7 +715,6 @@ border-slate-700
 px-4
 py-3
 "
-
 />
 
 
@@ -922,15 +728,21 @@ mt-3
 rounded-xl
 overflow-hidden
 border
-border-slate-800
+border-slate-700
 "
 >
 
-
 {
 
-filteredChildren.map(child=>(
+filteredChildren.length === 0 ?
 
+<p className="p-4 text-center text-slate-400">
+لا يوجد طفل بهذا الاسم
+</p>
+
+:
+
+filteredChildren.map(child=>(
 
 <button
 
@@ -947,32 +759,25 @@ setSearch(child.name);
 className="
 w-full
 bg-slate-950
-p-4
 border-b
 border-slate-800
+p-4
 text-right
 hover:bg-slate-800
 "
 
 >
 
-
 <p className="font-bold">
-
 {child.name}
-
 </p>
 
-
 <p className="text-sm text-slate-400">
-
 🏆 {getTeamName(child.team_id)}
-
 </p>
 
 
 </button>
-
 
 ))
 
@@ -980,7 +785,6 @@ hover:bg-slate-800
 
 
 </div>
-
 
 )}
 
@@ -991,31 +795,27 @@ hover:bg-slate-800
 
 {selectedChild && (
 
-
 <div className="
 mt-5
 rounded-2xl
-bg-blue-500/10
 border
 border-blue-500/30
+bg-blue-500/10
 p-5
 "
 >
 
-
-<h2 className="text-xl font-black">
-
+<h2 className="
+text-xl
+font-black
+">
 {selectedChild.name}
-
 </h2>
 
 
 <p className="text-slate-400">
-
 🏆 {getTeamName(selectedChild.team_id)}
-
 </p>
-
 
 
 <button
@@ -1036,17 +836,11 @@ font-black
 >
 
 {
-
 loading
-
 ?
-
 "جاري التسجيل..."
-
 :
-
 "✅ تسجيل الحضور"
-
 }
 
 
@@ -1055,8 +849,8 @@ loading
 
 </div>
 
-
 )}
+
 
 
 
@@ -1070,8 +864,121 @@ p-4
 text-center
 font-bold
 ">
-
 {message}
+</div>
+
+)}
+
+
+
+
+</div>
+
+
+
+
+
+{/* قوائم الحضور والغياب */}
+
+<div className="
+mt-6
+space-y-4
+">
+
+
+<button
+
+onClick={()=>setShowPresent(!showPresent)}
+
+className="
+w-full
+rounded-2xl
+border
+border-green-500/30
+bg-green-500/10
+p-4
+text-right
+font-bold
+"
+
+>
+
+✅ الحاضرين اليوم ({presentChildren.length})
+
+</button>
+
+
+
+{showPresent && (
+
+<div className="
+rounded-2xl
+bg-slate-900
+p-4
+space-y-2
+"
+>
+
+{
+presentChildren.map(child=>(
+
+<p key={child.id}>
+✅ {child.name}
+</p>
+
+))
+}
+
+</div>
+
+)}
+
+
+
+
+
+<button
+
+onClick={()=>setShowAbsent(!showAbsent)}
+
+className="
+w-full
+rounded-2xl
+border
+border-red-500/30
+bg-red-500/10
+p-4
+text-right
+font-bold
+"
+
+>
+
+❌ الغائبين ({absentChildren.length})
+
+</button>
+
+
+
+{showAbsent && (
+
+<div className="
+rounded-2xl
+bg-slate-900
+p-4
+space-y-2
+"
+>
+
+{
+absentChildren.map(child=>(
+
+<p key={child.id}>
+❌ {child.name}
+</p>
+
+))
+}
 
 </div>
 
@@ -1086,7 +993,7 @@ font-bold
 
 
 
-{/* زر الحساب تحت خالص */}
+{/* حساب النقاط */}
 
 <div className="
 mt-10
@@ -1099,29 +1006,24 @@ p-5
 >
 
 
-<h2 className="
-font-black
-text-lg
-">
-
+<h2 className="font-black text-lg">
 ⭐ اعتماد نقاط الحضور
-
 </h2>
 
 
 <p className="
+mt-2
 text-sm
 text-slate-300
-mt-2
 ">
 
-سيتم حساب نسبة حضور كل فريق وإضافة النقاط تلقائياً:
-<br/>
 75% فأكثر = 100 نقطة
 <br/>
 50% إلى أقل من 75% = 70 نقطة
 <br/>
-أقل من 50% = 40 نقطة
+20% إلى أقل من 50% = 40 نقطة
+<br/>
+أقل من 20% = 0 نقطة
 
 </p>
 
@@ -1132,13 +1034,13 @@ mt-2
 
 onClick={()=>{
 
-const confirmAction =
+const ok =
 window.confirm(
-"هل أنت متأكد من حساب نقاط الحضور؟ لا يمكن تكرارها لنفس اليوم"
+"هل أنت متأكد من اعتماد نقاط الحضور؟"
 );
 
 
-if(confirmAction){
+if(ok){
 
 calculateAttendancePoints();
 
@@ -1156,27 +1058,21 @@ bg-yellow-500
 text-black
 py-3
 font-black
+disabled:opacity-50
 "
 
 >
 
 {
-
 pointsLoading
-
 ?
-
 "جاري الحساب..."
-
 :
-
 "⭐ حساب نقاط الفرق"
-
 }
 
 
 </button>
-
 
 
 </div>
@@ -1187,7 +1083,6 @@ pointsLoading
 
 
 {attendanceReport.length>0 && (
-
 
 <div className="
 mt-6
@@ -1200,20 +1095,13 @@ p-5
 >
 
 
-<h2 className="
-text-xl
-font-black
-mb-4
-">
-
+<h2 className="text-xl font-black mb-4">
 📊 تقرير النقاط
-
 </h2>
 
 
 
 <div className="space-y-3">
-
 
 {
 
@@ -1221,36 +1109,26 @@ attendanceReport.map((team,index)=>(
 
 
 <div
-
 key={index}
-
 className="
 rounded-2xl
 bg-slate-800
 p-4
 "
-
 >
 
-
 <p className="font-black text-lg">
-
 {team.teamName}
-
 </p>
 
 
-<p className="text-slate-300">
-
+<p>
 حضر {team.present} من {team.total}
-
 </p>
 
 
-<p className="text-slate-300">
-
+<p>
 النسبة {team.percentage}%
-
 </p>
 
 
@@ -1259,9 +1137,7 @@ mt-2
 font-black
 text-yellow-400
 ">
-
 ⭐ {team.points} نقطة
-
 </p>
 
 
@@ -1269,7 +1145,6 @@ text-yellow-400
 
 
 ))
-
 
 }
 
@@ -1279,18 +1154,16 @@ text-yellow-400
 
 </div>
 
-
 )}
+
 
 
 
 
 </div>
 
-
 </main>
 
 );
-
 
 }
