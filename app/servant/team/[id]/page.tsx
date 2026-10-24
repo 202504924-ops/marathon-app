@@ -17,143 +17,230 @@ type Child = {
 
 
 type Team = {
-  id: number;
-  name: string;
+  id:number;
+  name:string;
+};
+
+
+type PointHistory = {
+  id:number;
+  points:number;
+  type:string;
+  reason:string;
+  added_by:string | null;
+  created_at:string;
 };
 
 
 
 export default function TeamPage(){
 
-  const router = useRouter();
-  const params = useParams();
 
-  const teamId = Number(params.id);
-  console.log("TEAM ID =", params.id);
-console.log("NUMBER =", teamId);
+const router = useRouter();
+const params = useParams();
 
 
-  const [team,setTeam] = useState<Team | null>(null);
-  const [children,setChildren] = useState<Child[]>([]);
-  const [loading,setLoading] = useState(true);
+const teamId = Number(params.id);
 
 
 
-  useEffect(()=>{
+const [team,setTeam] =
+useState<Team | null>(null);
 
 
-    async function loadTeam(){
-
-      try{
-
-
-        const {
-          data:teamData,
-          error:teamError
-        } = await supabase
-          .from("teams")
-          .select("id,name")
-          .eq("id",teamId)
-          .single();
+const [children,setChildren] =
+useState<Child[]>([]);
 
 
-
-        if(teamError)
-          throw teamError;
-
+const [pointsHistory,setPointsHistory] =
+useState<PointHistory[]>([]);
 
 
-        setTeam(teamData);
+const [loading,setLoading] =
+useState(true);
+
+
+const [showPointsHistory,setShowPointsHistory] =
+useState(false);
 
 
 
 
-        const {
-          data:childrenData,
-          error:childrenError
-        } = await supabase
-          .rpc(
-            "get_team_children_details",
-            {
-              team_id_input: teamId
-            }
-          );
-
-          console.log("TEAM ID:", teamId);
-console.log("CHILDREN DATA:", childrenData);
-console.log("RPC ERROR:", childrenError);
+useEffect(()=>{
 
 
-
-        if(childrenError)
-          throw childrenError;
+async function loadTeam(){
 
 
+try{
 
-        setChildren(
-          childrenData || []
-        );
+
+const {
+data:teamData,
+error:teamError
+
+}=await supabase
+.from("teams")
+.select("id,name")
+.eq("id",teamId)
+.single();
 
 
 
-      }
-      catch(error){
+if(teamError)
+throw teamError;
 
-  console.log("Team Error", error);
 
-  alert(JSON.stringify(error));
+
+setTeam(teamData);
+
+
+
+
+
+const {
+data:childrenData,
+error:childrenError
+
+}=await supabase
+.rpc(
+"get_team_children_details",
+{
+team_id_input:teamId
+}
+);
+
+
+
+if(childrenError)
+throw childrenError;
+
+
+
+setChildren(
+childrenData || []
+);
+
+
+
+
+
+
+const {
+data:pointsData,
+error:pointsError
+
+}=await supabase
+.from("team_points")
+.select("*")
+.eq(
+"team_id",
+teamId
+)
+.order(
+"created_at",
+{
+ascending:false
+}
+);
+
+
+
+if(pointsError)
+throw pointsError;
+
+
+
+setPointsHistory(
+pointsData || []
+);
+
+
 
 }
-      finally{
 
-        setLoading(false);
+catch(error){
 
-      }
+console.log(
+"Team Error",
+error
+);
 
+}
 
-    }
+finally{
 
+setLoading(false);
 
-
-    if(teamId)
-      loadTeam();
-
-
-  },[teamId]);
-
+}
 
 
+}
 
 
 
-  if(loading){
+if(teamId)
+loadTeam();
 
-    return(
 
-      <main
-        dir="rtl"
-        className="
-        min-h-screen
-        bg-[#050816]
-        text-white
-        flex
-        items-center
-        justify-center
-        "
-      >
 
-        جاري تحميل الفريق...
-
-      </main>
-
-    );
-
-  }
+},[teamId]);
 
 
 
 
 
+
+if(loading){
+
+return(
+
+<main
+dir="rtl"
+className="
+min-h-screen
+bg-[#050816]
+text-white
+flex
+items-center
+justify-center
+"
+>
+
+<div className="text-xl font-black">
+جاري تحميل الفريق...
+</div>
+
+</main>
+
+);
+
+}
+
+
+
+
+
+const totalPoints =
+pointsHistory.reduce(
+(sum,item)=>
+sum + Number(item.points || 0),
+0
+);
+
+
+
+const attendancePoints =
+pointsHistory.filter(
+item=>item.type==="attendance"
+);
+
+
+
+const manualPoints =
+pointsHistory.filter(
+item=>item.type==="manual"
+);
 return(
 
 <main
@@ -168,12 +255,7 @@ py-8
 >
 
 
-<div
-className="
-max-w-3xl
-mx-auto
-"
->
+<div className="max-w-3xl mx-auto">
 
 
 
@@ -184,6 +266,8 @@ onClick={()=>router.back()}
 className="
 mb-6
 text-slate-400
+hover:text-white
+transition
 "
 
 >
@@ -196,11 +280,13 @@ text-slate-400
 
 
 
+{/* HEADER */}
+
 <div
 className="
 rounded-[40px]
 p-7
-bg-gradient-to-br
+bg-linear-to-br
 from-blue-700
 via-blue-900
 to-black
@@ -236,11 +322,19 @@ font-black
 
 
 
+
 <div
 className="
-mt-6
+mt-7
+flex
+items-center
+justify-between
+gap-4
 "
 >
+
+
+<div>
 
 <p className="text-slate-300">
 عدد الأطفال
@@ -263,6 +357,42 @@ text-blue-300
 </div>
 
 
+
+
+
+<button
+
+onClick={()=>
+setShowPointsHistory(!showPointsHistory)
+}
+
+className="
+rounded-3xl
+bg-yellow-500/20
+border
+border-yellow-400/40
+px-5
+py-4
+font-black
+text-yellow-300
+hover:bg-yellow-500/30
+transition
+active:scale-95
+"
+
+>
+
+📜
+<br/>
+سجل النقاط
+
+</button>
+
+
+
+</div>
+
+
 </div>
 
 
@@ -270,6 +400,348 @@ text-blue-300
 
 
 
+{/* POINTS HISTORY */}
+
+
+{showPointsHistory && (
+
+
+<div
+className="
+mt-8
+rounded-[35px]
+bg-slate-900
+border
+border-yellow-500/20
+p-6
+animate-in
+fade-in
+slide-in-from-top-3
+"
+>
+
+
+
+<div
+className="
+grid
+grid-cols-3
+gap-3
+mb-6
+"
+>
+
+
+<div
+className="
+rounded-2xl
+bg-black/30
+p-4
+text-center
+"
+>
+
+<p className="text-slate-400 text-sm">
+إجمالي النقاط
+</p>
+
+
+<p
+className="
+text-3xl
+font-black
+text-yellow-400
+"
+>
+
+{totalPoints}
+
+</p>
+
+
+</div>
+
+
+
+
+
+<div
+className="
+rounded-2xl
+bg-black/30
+p-4
+text-center
+"
+>
+
+<p className="text-slate-400 text-sm">
+الحضور
+</p>
+
+
+<p
+className="
+text-3xl
+font-black
+text-green-400
+"
+>
+
+{attendancePoints.length}
+
+</p>
+
+
+</div>
+
+
+
+
+
+<div
+className="
+rounded-2xl
+bg-black/30
+p-4
+text-center
+"
+>
+
+<p className="text-slate-400 text-sm">
+يدوي
+</p>
+
+
+<p
+className="
+text-3xl
+font-black
+text-blue-400
+"
+>
+
+{manualPoints.length}
+
+</p>
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+<h2
+className="
+text-2xl
+font-black
+mb-5
+"
+>
+
+📜 تفاصيل النقاط
+
+</h2>
+
+
+
+
+<div className="space-y-4">
+
+
+{
+
+pointsHistory.length===0 ?
+
+
+<p className="text-center text-slate-400">
+لا يوجد سجل نقاط
+</p>
+
+
+
+:
+
+
+pointsHistory.map(point=>(
+
+
+<div
+key={point.id}
+className="
+rounded-3xl
+bg-black/30
+border
+border-white/10
+p-5
+"
+>
+
+
+
+<div
+className="
+flex
+justify-between
+items-center
+"
+>
+
+
+<div>
+
+<h3 className="font-black text-lg">
+
+{
+
+point.type==="attendance"
+
+?
+
+"✅ نقاط حضور"
+
+:
+
+point.points < 0
+
+?
+
+"🔻 خصم نقاط"
+
+:
+
+"⭐ إضافة يدوية"
+
+}
+
+</h3>
+
+
+</div>
+
+
+
+<p
+className={`
+font-black
+text-2xl
+${
+point.points >=0
+?
+"text-green-400"
+:
+"text-red-400"
+}
+`}
+>
+
+
+{
+point.points>=0
+?
+"+"
+:
+""
+}
+
+{point.points}
+
+
+</p>
+
+
+
+</div>
+
+
+
+
+
+<p className="mt-4 text-slate-300">
+
+📝 السبب:
+{" "}
+{point.reason || "بدون سبب"}
+
+</p>
+
+
+
+
+{
+
+point.type==="manual" &&
+
+<p
+className="
+mt-2
+text-blue-300
+"
+>
+
+👤 أضافها:
+{" "}
+{point.added_by || "غير معروف"}
+
+</p>
+
+}
+
+
+
+
+<p
+className="
+mt-2
+text-sm
+text-slate-500
+"
+>
+
+📅
+
+{" "}
+
+{
+new Date(point.created_at)
+.toLocaleString("ar-EG")
+}
+
+</p>
+
+
+
+
+</div>
+
+
+))
+
+
+}
+
+
+
+</div>
+
+
+
+</div>
+
+
+)}
+
+
+
+
+
+
+
+{/* CHILDREN */}
 
 
 <div
@@ -299,27 +771,16 @@ mb-5
 
 
 
-
-<div
-className="
-space-y-5
-"
->
+<div className="space-y-5">
 
 
 {
-children.length === 0 ?
+
+children.length===0 ?
 
 
-<p
-className="
-text-center
-text-slate-400
-"
->
-
+<p className="text-center text-slate-400">
 لا يوجد أطفال
-
 </p>
 
 
@@ -334,7 +795,9 @@ children.map(child=>(
 
 key={child.id}
 
-onClick={()=>router.push(`/servant/child/${child.id}`)}
+onClick={()=>
+router.push(`/servant/child/${child.id}`)
+}
 
 className="
 cursor-pointer
@@ -350,6 +813,7 @@ transition
 >
 
 
+
 <div
 className="
 flex
@@ -362,7 +826,7 @@ gap-4
 <div className="text-4xl">
 
 {
-child.gender === "female"
+child.gender==="female"
 ?
 "👧"
 :
@@ -375,27 +839,13 @@ child.gender === "female"
 
 <div>
 
-<h3
-className="
-font-black
-text-xl
-"
->
-
+<h3 className="text-xl font-black">
 {child.name}
-
 </h3>
 
 
-<p
-className="
-text-sm
-text-slate-400
-"
->
-
+<p className="text-sm text-slate-400">
 اضغط لعرض التفاصيل
-
 </p>
 
 
@@ -419,37 +869,23 @@ text-center
 >
 
 
-
 <div className="rounded-xl bg-white/5 p-3">
 
 📋
-
 <br/>
-
-<span className="text-sm">
 حضور
-</span>
-
 <br/>
-
 {child.attendance_count}
 
 </div>
 
 
 
-
-
 <div className="rounded-xl bg-white/5 p-3">
 
 ✝️
-
 <br/>
-
-<span className="text-sm">
 اعتراف
-</span>
-
 <br/>
 
 {
@@ -464,18 +900,11 @@ child.confession
 
 
 
-
-
 <div className="rounded-xl bg-white/5 p-3">
 
 📖
-
 <br/>
-
-<span className="text-sm">
 مزمور
-</span>
-
 <br/>
 
 {
@@ -490,20 +919,11 @@ child.psalm
 
 
 
-
-
-
-
 <div className="rounded-xl bg-white/5 p-3">
 
 ⛪
-
 <br/>
-
-<span className="text-sm">
 قداس
-</span>
-
 <br/>
 
 {
@@ -518,13 +938,11 @@ child.mass
 
 
 
-
 </div>
 
 
 
 </div>
-
 
 
 ))
@@ -542,10 +960,12 @@ child.mass
 
 
 
+
 </div>
 
 
 </main>
+
 
 );
 

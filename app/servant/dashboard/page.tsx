@@ -970,17 +970,7 @@ onClick={()=>goTo("/add-child")}
 
 
 
-<ServiceCard
 
-icon="👥"
-
-title="الفرق"
-
-desc="إدارة فرق الماراثون"
-
-onClick={()=>goTo("/add-team")}
-
-/>
 
 
 

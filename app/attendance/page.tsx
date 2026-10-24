@@ -354,7 +354,32 @@ return;
 
 setPointsLoading(true);
 
+const { data: attendanceData, error } = await supabase
+.from("attendance")
+.select("child_id")
+.eq(
+  "attendance_date",
+  getToday()
+);
 
+
+if(error){
+
+setMessage(
+"حصل خطأ أثناء جلب الحضور"
+);
+
+setPointsLoading(false);
+
+return;
+
+}
+
+
+const attendanceIds =
+attendanceData?.map(
+(item)=>item.child_id
+) || [];
 
 const report:AttendanceReport[]=[];
 
@@ -380,8 +405,8 @@ continue;
 
 const present =
 teamChildren.filter(
-child=>
-todayAttendance.includes(child.id)
+child =>
+attendanceIds.includes(child.id)
 ).length;
 
 
@@ -579,7 +604,7 @@ hover:text-white
 <div
 className="
 rounded-3xl
-bg-gradient-to-br
+bg-linear-to-br
 from-blue-900
 to-slate-900
 border

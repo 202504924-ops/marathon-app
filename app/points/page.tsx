@@ -18,10 +18,24 @@ export default function PointsPage() {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [userName, setUserName] = useState("");
 
-  useEffect(() => {
-    loadTeams();
-  }, []);
+ useEffect(() => {
+
+  loadTeams();
+
+  const savedUser =
+    localStorage.getItem("marathon_user");
+
+  if(savedUser){
+
+    const user = JSON.parse(savedUser);
+
+    setUserName(user.name || "غير معروف");
+
+  }
+
+}, []);
 
   async function loadTeams() {
     setMessage("");
@@ -94,13 +108,14 @@ export default function PointsPage() {
           : -pointsNumber;
 
       const { error } = await supabase
-        .from("team_points")
-        .insert({
-          team_id: selectedTeam.id,
-          points: finalPoints,
-          type: "manual",
-          reason: cleanReason,
-        });
+  .from("team_points")
+  .insert({
+    team_id: selectedTeam.id,
+    points: finalPoints,
+    type: "manual",
+    reason: cleanReason,
+    added_by: userName || "غير معروف",
+  });
 
       if (error) {
         console.error(
