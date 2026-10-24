@@ -3,948 +3,1315 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
+
 type Child = {
-  id: number;
-  name: string;
-  team_id: number;
+  id:number;
+  name:string;
+  team_id:number;
 };
+
 
 type Team = {
-  id: number;
-  name: string;
+  id:number;
+  name:string;
 };
+
 
 type MassAttendance = {
-  child_id: number;
-  mass_week_start: string;
+  child_id:number;
+  mass_week_start:string;
 };
 
-export default function MassPage() {
 
-  const [children, setChildren] = useState<Child[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [massAttendance, setMassAttendance] = useState<MassAttendance[]>([]);
 
-  const [search, setSearch] = useState("");
-  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
+export default function MassPage(){
 
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [registering, setRegistering] = useState(false);
 
-  const [weekStart, setWeekStart] = useState("");
+const [children,setChildren] = useState<Child[]>([]);
+const [teams,setTeams] = useState<Team[]>([]);
+const [massAttendance,setMassAttendance] = useState<MassAttendance[]>([]);
 
-  const [showPresent, setShowPresent] = useState(false);
-  const [showAbsent, setShowAbsent] = useState(false);
 
+const [search,setSearch] = useState("");
+const [selectedChild,setSelectedChild] = useState<Child|null>(null);
 
-  useEffect(() => {
 
-    const currentWeek = getMassWeekStart();
+const [message,setMessage] = useState("");
+const [loading,setLoading] = useState(true);
+const [registering,setRegistering] = useState(false);
 
-    setWeekStart(currentWeek);
 
-    loadData(currentWeek);
+const [weekStart,setWeekStart] = useState("");
 
-  }, []);
 
+const [showPresent,setShowPresent] = useState(false);
+const [showAbsent,setShowAbsent] = useState(false);
 
 
-  function getCairoDate(){
 
-    return new Date(
-      new Date().toLocaleString(
-        "en-US",
-        {
-          timeZone:"Africa/Cairo"
-        }
-      )
-    );
 
-  }
 
+useEffect(()=>{
 
 
-  function formatDate(date:Date){
+const currentWeek = getMassWeekStart();
 
-    const year = date.getFullYear();
 
-    const month = String(
-      date.getMonth()+1
-    ).padStart(2,"0");
+setWeekStart(currentWeek);
 
-    const day = String(
-      date.getDate()
-    ).padStart(2,"0");
 
+loadData(currentWeek);
 
-    return `${year}-${month}-${day}`;
 
-  }
+},[]);
 
 
 
-  function getMassWeekStart(){
 
-    const today = getCairoDate();
 
-    const day = today.getDay();
 
-    const daysSinceFriday =
-      (day + 2) % 7;
+function getCairoDate(){
 
+return new Date(
+new Date().toLocaleString(
+"en-US",
+{
+timeZone:"Africa/Cairo"
+}
+)
+);
 
-    const friday = new Date(today);
+}
 
 
-    friday.setDate(
-      today.getDate() - daysSinceFriday
-    );
 
 
-    return formatDate(friday);
 
-  }
 
 
+function formatDate(date:Date){
 
-  function getWeekEnd(start:string){
 
-    const date = new Date(
-      `${start}T00:00:00`
-    );
+const year = date.getFullYear();
 
+const month = String(
+date.getMonth()+1
+).padStart(2,"0");
 
-    date.setDate(
-      date.getDate()+6
-    );
 
+const day = String(
+date.getDate()
+).padStart(2,"0");
 
-    return formatDate(date);
 
-  }
+return `${year}-${month}-${day}`;
 
 
+}
 
-  async function loadData(currentWeek:string){
 
-    setLoading(true);
 
-    setMessage("");
 
 
-    try{
 
 
-      const [
-        childrenResult,
-        teamsResult,
-        massResult
-      ] = await Promise.all([
 
+function getMassWeekStart(){
 
-        supabase
-        .from("children")
-        .select("id,name,team_id")
-        .order("name"),
 
+const today = getCairoDate();
 
 
-        supabase
-        .from("teams")
-        .select("id,name")
-        .order("id"),
+const day = today.getDay();
 
 
+const daysSinceFriday =
+(day+2)%7;
 
-        supabase
-        .from("mass_attendance")
-        .select(
-          "child_id,mass_week_start"
-        )
-        .eq(
-          "mass_week_start",
-          currentWeek
-        )
 
 
-      ]);
+const friday = new Date(today);
 
 
 
-      if(
-        childrenResult.error ||
-        teamsResult.error ||
-        massResult.error
-      ){
+friday.setDate(
+today.getDate()-daysSinceFriday
+);
 
-        setMessage(
-          "حصل خطأ أثناء تحميل البيانات"
-        );
 
-        return;
 
-      }
+return formatDate(friday);
 
 
+}
 
-      setChildren(
-        childrenResult.data || []
-      );
 
 
-      setTeams(
-        teamsResult.data || []
-      );
 
 
-      setMassAttendance(
-        massResult.data || []
-      );
 
 
 
-    }
-    catch(error){
+function getWeekEnd(start:string){
 
-      console.error(error);
 
-      setMessage(
-        "حصل خطأ أثناء تحميل بيانات القداس"
-      );
+const date = new Date(
+`${start}T00:00:00`
+);
 
-    }
-    finally{
 
-      setLoading(false);
+date.setDate(
+date.getDate()+6
+);
 
-    }
 
 
-  }
+return formatDate(date);
 
 
+}
 
-  function getTeamName(teamId:number){
 
-    return (
-      teams.find(
-        team => team.id === teamId
-      )?.name || "بدون فريق"
-    );
 
-  }
 
 
 
-  function hasAttendedMass(childId:number){
 
-    return massAttendance.some(
-      item =>
-        item.child_id === childId &&
-        item.mass_week_start === weekStart
-    );
 
-  }
 
+async function loadData(currentWeek:string){
 
 
-  function getMassPoints(percentage:number){
+setLoading(true);
 
-    if(percentage >= 75){
 
-      return 100;
+try{
 
-    }
 
+const [
+childrenResult,
+teamsResult,
+massResult
+]=await Promise.all([
 
-    if(percentage >= 50){
 
-      return 70;
 
-    }
+supabase
+.from("children")
+.select("id,name,team_id")
+.order("name"),
 
 
-    return 40;
 
-  }
 
+supabase
+.from("teams")
+.select("id,name")
+.order("id"),
 
 
-  async function updateMassPoints(
-    teamId:number,
-    currentWeek:string
-  ){
 
-    const {
-      data:teamChildren,
-      error
-    } = await supabase
-      .from("children")
-      .select("id")
-      .eq(
-        "team_id",
-        teamId
-      );
 
+supabase
+.from("mass_attendance")
+.select(
+"child_id,mass_week_start"
+)
+.eq(
+"mass_week_start",
+currentWeek
+)
 
-    if(error)
-      throw error;
 
 
+]);
 
-    const total =
-      teamChildren?.length || 0;
 
 
-    if(total === 0)
-      return null;
 
 
+if(
+childrenResult.error ||
+teamsResult.error ||
+massResult.error
+){
 
-    const ids =
-      teamChildren.map(
-        child=>child.id
-      );
+setMessage(
+"حصل خطأ أثناء تحميل البيانات"
+);
 
+return;
 
+}
 
-    const {
-      data:attendance
-    } = await supabase
-      .from("mass_attendance")
-      .select("child_id")
-      .eq(
-        "mass_week_start",
-        currentWeek
-      )
-      .in(
-        "child_id",
-        ids
-      );
 
 
 
-    const present =
-      attendance?.length || 0;
 
+setChildren(
+childrenResult.data || []
+);
 
 
-    const percentage =
-      (present / total) * 100;
 
+setTeams(
+teamsResult.data || []
+);
 
 
-    const points =
-      getMassPoints(
-        percentage
-      );
 
+setMassAttendance(
+massResult.data || []
+);
 
 
-    await supabase
-      .from("team_points")
-      .upsert({
 
-        team_id:teamId,
+}
+catch(error:any){
 
-        points,
 
-        type:"mass",
+console.error(
+"LOAD MASS ERROR:",
+error
+);
 
-        activity_date:currentWeek,
 
-        reason:
-        `قداس ${currentWeek}`
+setMessage(
+error.message ||
+"حصل خطأ أثناء تحميل البيانات"
+);
 
-      },
-      {
-        onConflict:
-        "team_id,type,activity_date"
-      });
 
+}
+finally{
 
 
-    return {
-      percentage,
-      points
-    };
+setLoading(false);
 
-  }
-    async function registerMass(){
 
-    if(!selectedChild){
+}
 
-      setMessage(
-        "اختار الطفل أولاً"
-      );
 
-      return;
+}
 
-    }
 
 
 
-    if(hasAttendedMass(selectedChild.id)){
 
-      setMessage(
-        "الطفل دا متسجل في قداس الأسبوع ده بالفعل"
-      );
 
-      return;
 
-    }
+function getTeamName(teamId:number){
 
 
+return (
+teams.find(
+team=>team.id===teamId
+)?.name ||
+"بدون فريق"
+);
 
-    setRegistering(true);
 
-    setMessage("");
+}
 
 
 
-    try{
 
 
-      const {
-        error
-      } = await supabase
-        .from("mass_attendance")
-        .insert({
 
-          child_id:selectedChild.id,
 
-          mass_week_start:weekStart
+function hasAttendedMass(childId:number){
 
-        });
 
+return massAttendance.some(
+item=>
+item.child_id===childId &&
+item.mass_week_start===weekStart
+);
 
 
-      if(error){
+}
 
-        if(error.code === "23505"){
 
-          setMessage(
-            "الطفل دا متسجل في قداس الأسبوع ده بالفعل"
-          );
 
-        }else{
 
-          setMessage(
-            "حصل خطأ أثناء تسجيل القداس"
-          );
 
-        }
 
 
-        return;
+function getMassPoints(percentage:number){
 
-      }
 
+if(percentage>=75)
+return 100;
 
 
-      const result =
-        await updateMassPoints(
-          selectedChild.team_id,
-          weekStart
-        );
+if(percentage>=50)
+return 70;
 
 
+return 40;
 
-      setMassAttendance(
-        prev => [
-          ...prev,
-          {
-            child_id:selectedChild.id,
-            mass_week_start:weekStart
-          }
-        ]
-      );
 
+}
+async function updateMassPoints(
+teamId:number,
+currentWeek:string
+){
 
 
-      if(result){
+const {
+data:teamChildren,
+error:childrenError
+}=await supabase
+.from("children")
+.select("id")
+.eq(
+"team_id",
+teamId
+);
 
-        setMessage(
-          `تم تسجيل ${selectedChild.name} ✅ نسبة الفريق ${Math.round(result.percentage)}% ونقاط الأسبوع ${result.points}`
-        );
 
-      }else{
 
-        setMessage(
-          `تم تسجيل ${selectedChild.name} بنجاح`
-        );
+if(childrenError)
+throw childrenError;
 
-      }
 
 
 
-      setSelectedChild(null);
+const total =
+teamChildren?.length || 0;
 
-      setSearch("");
 
 
+if(total===0)
+return null;
 
-    }
-    catch(error){
 
-      console.error(error);
 
-      setMessage(
-        "حصل خطأ أثناء التسجيل"
-      );
 
 
-    }
-    finally{
+const ids =
+teamChildren.map(
+child=>child.id
+);
 
-      setRegistering(false);
 
-    }
 
-  }
 
 
+const {
+data:attendance,
+error:attendanceError
+}=await supabase
+.from("mass_attendance")
+.select("child_id")
+.eq(
+"mass_week_start",
+currentWeek
+)
+.in(
+"child_id",
+ids
+);
 
-  const filteredChildren =
-    children.filter(child =>
-      child.name
-      .toLowerCase()
-      .includes(
-        search.toLowerCase()
-      )
-    );
 
 
 
-  const weekEnd =
-    weekStart
-    ? getWeekEnd(weekStart)
-    : "";
+if(attendanceError)
+throw attendanceError;
 
 
 
-  const presentChildren =
-    children.filter(child =>
-      hasAttendedMass(child.id)
-    );
 
 
+const present =
+attendance?.length || 0;
 
-  const absentChildren =
-    children.filter(child =>
-      !hasAttendedMass(child.id)
-    );
 
 
 
-  return (
 
-    <main
-      dir="rtl"
-      className="min-h-screen bg-slate-950 px-4 py-6 text-white"
-    >
+const percentage =
+(total > 0)
+?
+(present / total) * 100
+:
+0;
 
-      <div className="mx-auto w-full max-w-2xl">
 
 
-        <button
-          type="button"
-          onClick={() =>
-            window.location.href="/servant/dashboard"
-          }
-          className="mb-6 text-sm text-slate-400"
-        >
 
-          ← رجوع للوحة التحكم
 
-        </button>
+const points =
+getMassPoints(
+percentage
+);
 
 
 
-        <p className="text-sm text-blue-400">
 
-          ماراثون الخدمة
 
-        </p>
 
+// نشوف هل النقاط موجودة قبل كده
 
+const {
+data:oldPoint,
+error:oldError
+}=await supabase
+.from("team_points")
+.select("id")
+.eq(
+"team_id",
+teamId
+)
+.eq(
+"type",
+"mass"
+)
+.eq(
+"activity_date",
+currentWeek
+)
+.maybeSingle();
 
-        <h1 className="mt-2 text-3xl font-bold">
 
-          حضور القداس
 
-        </h1>
 
 
+if(oldError)
+throw oldError;
 
-        <p className="mt-2 text-slate-400">
 
-          تسجيل قداس واحد لكل طفل في الأسبوع
 
-        </p>
 
 
 
 
-        <div className="mt-6 rounded-3xl border border-slate-800 bg-slate-900 p-5">
+if(oldPoint){
 
 
-          <div className="rounded-2xl bg-slate-950 p-4">
+// تحديث النقاط القديمة
 
-            <p className="text-sm text-slate-400">
+const {
+error:updateError
+}=await supabase
+.from("team_points")
+.update({
 
-              أسبوع القداس
+points,
 
-            </p>
+reason:
+`قداس ${currentWeek}`
 
+})
+.eq(
+"id",
+oldPoint.id
+);
 
-            <p className="mt-2 font-bold">
 
-              الجمعة {weekStart}
 
-            </p>
+if(updateError)
+throw updateError;
 
 
-            <p className="text-sm text-slate-500">
 
-              حتى الخميس {weekEnd}
+}else{
 
-            </p>
 
+// إضافة نقاط جديدة
 
-          </div>
+const {
+error:insertError
+}=await supabase
+.from("team_points")
+.insert({
 
+team_id:teamId,
 
+points,
 
+type:"mass",
 
-          <div className="mt-5">
+activity_date:currentWeek,
 
-            <label className="mb-2 block text-sm text-slate-300">
+reason:
+`قداس ${currentWeek}`
 
-              البحث عن الطفل
+});
 
-            </label>
 
 
-            <input
+if(insertError)
+throw insertError;
 
-              value={search}
 
-              onChange={(e)=>{
+}
 
-                setSearch(e.target.value);
 
-                setSelectedChild(null);
 
-                setMessage("");
 
-              }}
 
-              placeholder="اكتب اسم الطفل..."
 
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3"
+return {
 
-            />
+percentage,
 
+points
 
-          </div>
+};
 
 
+}
 
 
 
-          {
-            search.trim() &&
-            !selectedChild &&
-            (
 
-              <div className="mt-3 rounded-xl border border-slate-700 bg-slate-950">
 
 
-                {
-                  loading ?
 
-                  <p className="p-4 text-center">
-                    جاري التحميل...
-                  </p>
 
 
-                  :
+async function calculateAllMassPoints(){
 
-                  filteredChildren.map(child=>(
 
+setMessage(
+"جاري حساب نقاط القداس..."
+);
 
-                    <button
 
-                      key={child.id}
 
-                      type="button"
+try{
 
-                      onClick={()=>{
 
-                        setSelectedChild(child);
+for(const team of teams){
 
-                      }}
 
-                      className="flex w-full justify-between border-b border-slate-800 p-4 text-right"
+await updateMassPoints(
+team.id,
+weekStart
+);
 
-                    >
 
-                      <div>
+}
 
-                        <p className="font-bold">
 
-                          {child.name}
 
-                        </p>
 
 
-                        <p className="text-xs text-slate-500">
+setMessage(
+"تم حساب نقاط القداس لكل الفرق بنجاح ✅"
+);
 
-                          الفريق: {getTeamName(child.team_id)}
 
-                        </p>
 
+}
+catch(error:any){
 
-                      </div>
 
+console.error(
+"MASS POINT ERROR:",
+error
+);
 
 
-                      {
-                        hasAttendedMass(child.id)
 
-                        ?
+setMessage(
+error?.message ||
+"حصل خطأ أثناء حساب النقاط"
+);
 
-                        <span className="text-green-400">
 
-                          حضر
 
-                        </span>
+}
 
-                        :
 
-                        <span className="text-purple-400">
 
-                          اختيار
+}
 
-                        </span>
 
-                      }
 
 
-                    </button>
 
 
-                  ))
 
-                }
 
 
-              </div>
+async function registerMass(){
 
-            )
 
-          }
+if(!selectedChild){
 
 
+setMessage(
+"اختار الطفل أولاً"
+);
 
 
+return;
 
 
-          {
-            selectedChild &&
+}
 
-            <div className="mt-5 rounded-2xl border border-purple-500/30 bg-purple-500/10 p-5">
 
 
-              <h2 className="text-2xl font-bold">
 
-                {selectedChild.name}
 
-              </h2>
+if(hasAttendedMass(selectedChild.id)){
 
 
-              <p className="text-sm text-slate-400">
+setMessage(
+"الطفل دا متسجل بالفعل"
+);
 
-                الفريق: {getTeamName(selectedChild.team_id)}
 
-              </p>
+return;
 
 
+}
 
-              <button
 
-                onClick={registerMass}
 
-                disabled={registering}
 
-                className="mt-5 w-full rounded-xl bg-purple-600 py-3 font-bold"
 
-              >
+setRegistering(true);
 
-                {
-                  registering
 
-                  ?
+setMessage("");
 
-                  "جاري التسجيل..."
 
-                  :
 
-                  "تسجيل حضور القداس"
+try{
 
-                }
 
 
-              </button>
+const {
+error
+}=await supabase
+.from("mass_attendance")
+.insert({
 
+child_id:selectedChild.id,
 
+mass_week_start:weekStart
 
-            </div>
+});
 
-          }
 
 
 
 
+if(error){
 
 
-          {
-            message &&
+if(error.code==="23505"){
 
-            <div className="mt-5 rounded-xl bg-slate-950 p-4 text-center font-bold">
 
-              {message}
+setMessage(
+"الطفل دا متسجل بالفعل"
+);
 
-            </div>
 
-          }
+}else{
 
 
+setMessage(
+error.message
+);
 
 
+}
 
 
-          <div className="mt-5 space-y-4">
+return;
 
 
-            <button
+}
 
-              onClick={()=>setShowPresent(!showPresent)}
 
-              className="flex w-full justify-between rounded-2xl border border-green-500/30 bg-green-500/10 p-4"
 
-            >
 
-              <span className="font-bold text-green-400">
 
-                ✅ حضروا القداس ({presentChildren.length})
 
-              </span>
+setMassAttendance(
+prev=>[
+...prev,
+{
+child_id:selectedChild.id,
+mass_week_start:weekStart
+}
+]
+);
 
 
-              <span>
 
-                {showPresent ? "▲" : "▼"}
 
-              </span>
 
 
-            </button>
+// تحديث نقاط الفريق مباشرة
 
+await updateMassPoints(
+selectedChild.team_id,
+weekStart
+);
 
 
 
-            {
-              showPresent &&
 
-              <div className="rounded-2xl bg-slate-950 p-4">
 
-                {
-                  presentChildren.map(child=>(
 
-                    <p key={child.id} className="mb-2">
 
-                      ✅ {child.name}
+setMessage(
+`تم تسجيل ${selectedChild.name} بنجاح ✅`
+);
 
-                    </p>
 
-                  ))
-                }
 
-              </div>
 
-            }
 
 
+setSelectedChild(null);
 
+setSearch("");
 
 
 
-            <button
+}
+catch(error:any){
 
-              onClick={()=>setShowAbsent(!showAbsent)}
 
-              className="flex w-full justify-between rounded-2xl border border-red-500/30 bg-red-500/10 p-4"
+console.error(
+"REGISTER MASS ERROR:",
+error
+);
 
-            >
 
-              <span className="font-bold text-red-400">
 
-                ❌ لم يحضروا ({absentChildren.length})
+setMessage(
+error?.message ||
+"حصل خطأ أثناء التسجيل"
+);
 
-              </span>
 
 
-              <span>
+}
+finally{
 
-                {showAbsent ? "▲" : "▼"}
 
-              </span>
+setRegistering(false);
 
 
-            </button>
+}
 
 
 
+}
+const filteredChildren =
+children.filter(child =>
+child.name
+.toLowerCase()
+.includes(
+search.toLowerCase()
+)
+);
 
-            {
-              showAbsent &&
 
-              <div className="rounded-2xl bg-slate-950 p-4">
 
-                {
-                  absentChildren.map(child=>(
+const weekEnd =
+weekStart
+?
+getWeekEnd(weekStart)
+:
+"";
 
-                    <p key={child.id} className="mb-2">
 
-                      ❌ {child.name}
 
-                    </p>
+const presentChildren =
+children.filter(child =>
+hasAttendedMass(child.id)
+);
 
-                  ))
-                }
 
 
-              </div>
+const absentChildren =
+children.filter(child =>
+!hasAttendedMass(child.id)
+);
+return (
 
-            }
+<main
+dir="rtl"
+className="
+min-h-screen
+bg-slate-950
+px-4
+py-6
+text-white
+"
+>
 
 
+<div className="mx-auto max-w-2xl">
 
-          </div>
 
+<button
+onClick={()=>
+window.location.href="/servant/dashboard"
+}
+className="mb-6 text-sm text-slate-400"
+>
 
+← رجوع للوحة التحكم
 
-        </div>
+</button>
 
 
-      </div>
 
+<p className="text-blue-400">
+ماراثون الخدمة
+</p>
 
-    </main>
 
-  );
+<h1 className="mt-2 text-3xl font-black">
+⛪ حضور القداس
+</h1>
 
+
+<p className="mt-2 text-slate-400">
+تسجيل حضور القداس وحساب نقاط الفرق
+</p>
+
+
+
+
+
+<div
+className="
+mt-6
+rounded-3xl
+border
+border-slate-800
+bg-slate-900
+p-5
+"
+>
+
+
+<div className="rounded-2xl bg-slate-950 p-4">
+
+
+<p className="text-sm text-slate-400">
+أسبوع القداس
+</p>
+
+
+<p className="mt-2 font-bold">
+الجمعة {weekStart}
+</p>
+
+
+<p className="text-sm text-slate-500">
+حتى الخميس {weekEnd}
+</p>
+
+
+</div>
+
+
+
+
+
+
+
+<div className="mt-5">
+
+<label className="mb-2 block text-sm text-slate-300">
+البحث عن الطفل
+</label>
+
+
+<input
+
+value={search}
+
+onChange={(e)=>{
+
+setSearch(e.target.value);
+setSelectedChild(null);
+setMessage("");
+
+}}
+
+placeholder="اكتب اسم الطفل..."
+
+className="
+w-full
+rounded-xl
+border
+border-slate-700
+bg-slate-950
+px-4
+py-3
+"
+
+/>
+
+</div>
+
+
+
+
+
+
+
+
+{
+search.trim()
+&&
+!selectedChild
+
+&&
+
+<div className="mt-3 rounded-xl border border-slate-700 bg-slate-950">
+
+
+{
+loading ?
+
+<p className="p-4 text-center">
+جاري التحميل...
+</p>
+
+
+:
+
+filteredChildren.map(child=>(
+
+
+<button
+
+key={child.id}
+
+onClick={()=>
+setSelectedChild(child)
+}
+
+className="
+flex
+w-full
+justify-between
+border-b
+border-slate-800
+p-4
+text-right
+"
+
+>
+
+
+<div>
+
+<p className="font-bold">
+{child.name}
+</p>
+
+
+<p className="text-xs text-slate-500">
+
+الفريق:
+{getTeamName(child.team_id)}
+
+</p>
+
+
+</div>
+
+
+<span className="text-purple-400">
+اختيار
+</span>
+
+
+</button>
+
+
+))
+
+
+}
+
+
+</div>
+
+
+}
+
+
+
+
+
+
+
+
+{
+selectedChild &&
+
+<div
+className="
+mt-5
+rounded-2xl
+border
+border-purple-500/30
+bg-purple-500/10
+p-5
+"
+>
+
+
+<h2 className="text-2xl font-black">
+{selectedChild.name}
+</h2>
+
+
+<p className="text-slate-400">
+
+الفريق:
+{getTeamName(selectedChild.team_id)}
+
+</p>
+
+
+
+<button
+
+onClick={registerMass}
+
+disabled={registering}
+
+className="
+mt-5
+w-full
+rounded-xl
+bg-purple-600
+py-3
+font-black
+"
+
+>
+
+{
+registering
+?
+"جاري التسجيل..."
+:
+"تسجيل حضور القداس"
+}
+
+</button>
+
+
+</div>
+
+}
+
+
+
+
+
+
+
+{
+message &&
+
+<div
+className="
+mt-5
+rounded-xl
+bg-slate-950
+p-4
+text-center
+font-bold
+"
+>
+
+{message}
+
+</div>
+
+}
+
+
+
+
+
+
+
+<div className="mt-6 space-y-4">
+
+
+<button
+
+onClick={()=>setShowPresent(!showPresent)}
+
+className="
+flex
+w-full
+justify-between
+rounded-2xl
+border
+border-green-500/30
+bg-green-500/10
+p-4
+"
+
+>
+
+<span className="font-bold text-green-400">
+
+✅ حضروا القداس ({presentChildren.length})
+
+</span>
+
+
+<span>
+{showPresent ? "▲":"▼"}
+</span>
+
+
+</button>
+
+
+
+
+
+{
+showPresent &&
+
+<div className="rounded-2xl bg-slate-950 p-4">
+
+{
+presentChildren.map(child=>(
+
+<p key={child.id} className="mb-2">
+
+✅ {child.name}
+
+</p>
+
+))
+
+}
+
+</div>
+
+}
+
+
+
+
+
+
+
+
+<button
+
+onClick={()=>setShowAbsent(!showAbsent)}
+
+className="
+flex
+w-full
+justify-between
+rounded-2xl
+border
+border-red-500/30
+bg-red-500/10
+p-4
+"
+
+>
+
+<span className="font-bold text-red-400">
+
+❌ لم يحضروا ({absentChildren.length})
+
+</span>
+
+
+<span>
+{showAbsent ? "▲":"▼"}
+</span>
+
+
+</button>
+
+
+
+
+
+
+{
+showAbsent &&
+
+<div className="rounded-2xl bg-slate-950 p-4">
+
+
+{
+absentChildren.map(child=>(
+
+<p key={child.id} className="mb-2">
+
+❌ {child.name}
+
+</p>
+
+))
+
+}
+
+
+</div>
+
+}
+
+
+
+</div>
+
+
+
+
+
+<button
+
+onClick={calculateAllMassPoints}
+
+className="
+mt-8
+w-full
+rounded-2xl
+bg-yellow-600
+py-3
+font-black
+text-black
+hover:bg-yellow-500
+transition
+"
+
+>
+
+🏆 حساب نقاط القداس لكل الفرق
+
+</button>
+
+
+
+
+
+</div>
+
+</div>
+
+
+</main>
+
+);
 }
